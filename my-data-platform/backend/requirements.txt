@@ -1,0 +1,15 @@
+fastapi
+uvicorn[standard]
+polars
+python-multipart
+fpdf2
+pycaret
+openai
+celery
+redis
+transformers
+torch
+shap
+pyjwt
+passlib[bcrypt]
+pytest
