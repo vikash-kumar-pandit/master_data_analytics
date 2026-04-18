@@ -4,8 +4,9 @@ import os
 from celery import Celery
 
 from ml_engine import run_automl_stateless
-from utils import analyze_dataframe, generate_cleaning_stats, read_csv_from_bytes
+from utils import analyze_dataframe, generate_cleaning_stats
 from advanced_cleaner import advanced_data_cleaning
+from connectors import read_dataset_from_bytes
 
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
@@ -18,7 +19,7 @@ def async_clean_data(self, file_base64_string: str) -> dict:
     self.update_state(state="PROGRESS", meta={"status": "Loading CSV into memory...", "progress": 20})
 
     file_bytes = base64.b64decode(file_base64_string)
-    dataframe = read_csv_from_bytes(file_bytes)
+    dataframe = read_dataset_from_bytes(file_bytes, filename="dataset.csv")
 
     self.update_state(
         state="PROGRESS",
@@ -45,7 +46,7 @@ def async_run_automl(self, file_base64_string: str, target_column: str) -> dict:
         raise ValueError("Target column is required")
 
     file_bytes = base64.b64decode(file_base64_string)
-    dataframe = read_csv_from_bytes(file_bytes)
+    dataframe = read_dataset_from_bytes(file_bytes, filename="dataset.csv")
 
     self.update_state(state="PROGRESS", meta={"status": "Running model selection...", "progress": 75})
     result = run_automl_stateless(dataframe, target_column)

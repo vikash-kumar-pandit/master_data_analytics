@@ -1,11 +1,9 @@
-import io
-
 import polars as pl
+from connectors import read_dataset_from_bytes
 
 
 def read_csv_from_bytes(contents: bytes) -> pl.DataFrame:
-    return pl.read_csv(io.BytesIO(contents))
-
+    return read_dataset_from_bytes(contents, filename="data.csv")
 
 def infer_category(dataframe: pl.DataFrame) -> str:
     lower_columns = {column.lower() for column in dataframe.columns}

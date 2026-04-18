@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import ExplainableAIChart from './ExplainableAIChart';
-
-const API_BASE_URL = 'http://localhost:8000';
+import { API_BASE_URL } from '../config';
 
 export default function AutoMLWidget({ file, targetColumn, rows, onResult }) {
   const [taskId, setTaskId] = useState('');
@@ -135,15 +134,17 @@ export default function AutoMLWidget({ file, targetColumn, rows, onResult }) {
 
   const canStart = ['IDLE', 'REVOKED', 'FAILURE', 'SUCCESS'].includes(status);
   const isRunning = ['PENDING', 'PROGRESS', 'STARTED'].includes(status);
+  const statusTone = status === 'SUCCESS' ? 'good' : status === 'FAILURE' ? 'bad' : isRunning ? 'info' : 'idle';
 
   return (
     <div className="automl-widget">
-      <h3>AutoML Predictor</h3>
+      <div className="widget-title-row">
+        <h3>AutoML Predictor</h3>
+        <span className={`status-pill ${statusTone}`}>{status}</span>
+      </div>
+      <p className="widget-subtitle">Train and evaluate models from uploaded data without coding.</p>
 
       <div className="automl-widget-status">
-        <p>
-          <strong>Status:</strong> {status}
-        </p>
         <p>{message}</p>
       </div>
 

@@ -13,6 +13,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
 from auth import decode_access_token
+from activity_tracker import record_activity
 
 
 logger = logging.getLogger("data_platform")
@@ -28,7 +29,12 @@ RATE_LIMITS = {
     "/api/auth/login": int(os.getenv("RATE_LIMIT_LOGIN_PER_MINUTE", "10")),
     "/upload": int(os.getenv("RATE_LIMIT_UPLOAD_PER_MINUTE", "20")),
     "/clean": int(os.getenv("RATE_LIMIT_CLEAN_PER_MINUTE", "20")),
+    "/arrange": int(os.getenv("RATE_LIMIT_ARRANGE_PER_MINUTE", "20")),
     "/automl": int(os.getenv("RATE_LIMIT_AUTOML_PER_MINUTE", "10")),
+    "/api/analytics/query": int(os.getenv("RATE_LIMIT_ANALYTICS_QUERY_PER_MINUTE", "30")),
+    "/api/analytics/forecast": int(os.getenv("RATE_LIMIT_ANALYTICS_FORECAST_PER_MINUTE", "20")),
+    "/api/analytics/compare": int(os.getenv("RATE_LIMIT_ANALYTICS_COMPARE_PER_MINUTE", "20")),
+    "/api/analytics/report": int(os.getenv("RATE_LIMIT_ANALYTICS_REPORT_PER_MINUTE", "20")),
     "/api/clean-background": int(os.getenv("RATE_LIMIT_BACKGROUND_CLEAN_PER_MINUTE", "10")),
     "/api/predict-background": int(os.getenv("RATE_LIMIT_BACKGROUND_PREDICT_PER_MINUTE", "10")),
     "/generate-insights": int(os.getenv("RATE_LIMIT_INSIGHTS_PER_MINUTE", "30")),
@@ -39,7 +45,12 @@ RATE_LIMIT_STATE: dict[str, deque[float]] = defaultdict(deque)
 SENSITIVE_PATH_PREFIXES = (
     "/upload",
     "/clean",
+    "/arrange",
     "/automl",
+    "/api/analytics/query",
+    "/api/analytics/forecast",
+    "/api/analytics/compare",
+    "/api/analytics/report",
     "/generate-insights",
     "/api/clean-background",
     "/api/predict-background",
@@ -186,6 +197,28 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         if error:
             payload["error"] = error
         logger.info(json.dumps(payload, default=str))
+
+        try:
+            record_activity(
+                username=user_context.get("username"),
+                role=user_context.get("role"),
+                method=request.method,
+                path=request.url.path,
+                status_code=status_code,
+                duration_ms=duration_ms,
+                client_ip=self._client_key(request),
+            )
+        except Exception:
+            # Never block API responses for analytics persistence issues.
+            logger.exception(
+                json.dumps(
+                    {
+                        "event": "activity_record_failed",
+                        "request_id": request_id,
+                        "path": request.url.path,
+                    }
+                )
+            )
 
 
 def setup_observability(app) -> None:

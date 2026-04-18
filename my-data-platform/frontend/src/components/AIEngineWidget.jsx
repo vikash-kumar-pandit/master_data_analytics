@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import { API_BASE_URL } from '../config';
 
-const API_BASE_URL = 'http://localhost:8000';
 
 export default function AIEngineWidget({ rows, availableColumns, onUpdateData }) {
   const [columnName, setColumnName] = useState('');
@@ -51,7 +51,7 @@ export default function AIEngineWidget({ rows, availableColumns, onUpdateData })
 
   return (
     <div className="ai-engine-widget">
-      <h3>No-Code NLP Text Classification</h3>
+      <h3>No-Code NLP Classification</h3>
       <p>
         Categorize any text column using zero-shot AI. Example labels: Positive, Neutral, Negative.
       </p>
@@ -76,7 +76,7 @@ export default function AIEngineWidget({ rows, availableColumns, onUpdateData })
       </div>
 
       <button type="button" onClick={runNLP} disabled={loading}>
-        {loading ? 'Processing NLP...' : 'Run AI Classification'}
+        {loading ? 'Processing NLP...' : 'Run NLP Classification'}
       </button>
 
       {status ? <p className="ai-engine-status">{status}</p> : null}

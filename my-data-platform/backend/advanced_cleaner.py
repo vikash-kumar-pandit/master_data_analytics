@@ -112,3 +112,68 @@ def advanced_data_cleaning(dataframe: pl.DataFrame) -> pl.DataFrame:
             cleaned = _impute_text_mode(cleaned, column_name)
 
     return cleaned
+
+
+def advanced_data_arranging(dataframe: pl.DataFrame) -> tuple[pl.DataFrame, list[str]]:
+    arranged = dataframe.clone()
+    notes: list[str] = []
+
+    # 1) Keep business-friendly column order: id/date/name first, remaining alphabetic.
+    priority_prefixes = ("id", "date", "time", "timestamp", "name", "product", "category")
+    priority_columns = [
+        column_name
+        for column_name in arranged.columns
+        if any(column_name.lower().startswith(prefix) for prefix in priority_prefixes)
+    ]
+    trailing_columns = sorted([column_name for column_name in arranged.columns if column_name not in priority_columns])
+    ordered_columns = priority_columns + trailing_columns
+
+    if ordered_columns != arranged.columns:
+        arranged = arranged.select(ordered_columns)
+        notes.append("Columns reordered for readable business layout.")
+
+    # 2) Normalize text whitespace.
+    utf8_columns = [name for name, dtype in zip(arranged.columns, arranged.dtypes) if dtype == pl.Utf8]
+    if utf8_columns:
+        arranged = arranged.with_columns(
+            [
+                pl.col(column_name)
+                .str.strip_chars()
+                .str.replace_all(r"\s+", " ")
+                .alias(column_name)
+                for column_name in utf8_columns
+            ]
+        )
+        notes.append("Text values trimmed and extra spaces normalized.")
+
+    # 3) Standardize date-like columns to ISO strings where parsing succeeds.
+    date_like_columns = [
+        column_name
+        for column_name in utf8_columns
+        if any(token in column_name.lower() for token in ("date", "time", "timestamp"))
+    ]
+    for column_name in date_like_columns:
+        arranged = arranged.with_columns(
+            pl.when(pl.col(column_name).str.to_datetime(strict=False).is_not_null())
+            .then(pl.col(column_name).str.to_datetime(strict=False).dt.strftime("%Y-%m-%d %H:%M:%S"))
+            .otherwise(pl.col(column_name))
+            .alias(column_name)
+        )
+
+    if date_like_columns:
+        notes.append("Date/time columns converted to standard ISO display where possible.")
+
+    # 4) Sort rows by the best available business key for stable browsing.
+    sort_candidates = []
+    for preferred in ("id", "date", "time", "name", "product"):
+        sort_candidates.extend([column_name for column_name in arranged.columns if preferred in column_name.lower()])
+
+    if not sort_candidates and arranged.columns:
+        sort_candidates = [arranged.columns[0]]
+
+    if sort_candidates:
+        sort_column = sort_candidates[0]
+        arranged = arranged.sort(sort_column, nulls_last=True)
+        notes.append(f"Rows sorted by '{sort_column}' for consistent row navigation.")
+
+    return arranged, notes

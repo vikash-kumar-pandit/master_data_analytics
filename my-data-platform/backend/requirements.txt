@@ -3,6 +3,7 @@ uvicorn[standard]
 polars
 python-multipart
 fpdf2
+python-pptx
 pycaret
 openai
 celery
@@ -13,3 +14,6 @@ shap
 pyjwt
 passlib[bcrypt]
 pytest
+openpyxl
+pyarrow
+xlrd

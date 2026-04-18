@@ -31,9 +31,19 @@ export default function DataGrid({ rowData, columnDefs, onGridReady }) {
     <div className="grid-wrap">
       <div className="grid-toolbar">
         <button type="button" onClick={jumpToFirstCell} disabled={!rowData.length}>
-          Jump to first cell
+          Jump to First Cell
         </button>
       </div>
+
+      {!rowData.length ? (
+        <div className="grid-empty-state" role="status" aria-live="polite">
+          <div className="grid-empty-icon">CLD</div>
+          <h4>No Rows To Show</h4>
+          <p>Please upload a dataset to begin exploration.</p>
+          <span className="grid-empty-cta">Get Started</span>
+        </div>
+      ) : null}
+
       <div className="ag-theme-alpine grid-surface">
         <AgGridReact
           ref={gridRef}

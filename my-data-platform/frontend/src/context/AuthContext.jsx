@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
+import { API_BASE_URL } from '../config';
 
 const STORAGE_KEY = 'my_data_platform_auth';
-const API_BASE_URL = 'http://localhost:8000';
 
 const AuthContext = createContext(null);
 
@@ -18,8 +18,11 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
     try {
       const raw = window.localStorage.getItem(STORAGE_KEY);
-      return raw ? JSON.parse(raw) : null;
+      const parsed = raw ? JSON.parse(raw) : null;
+      applyAuthHeader(parsed?.token || null);
+      return parsed;
     } catch {
+      applyAuthHeader(null);
       return null;
     }
   });
@@ -50,11 +53,13 @@ export function AuthProvider({ children }) {
       token: response.data.access_token,
     };
 
+    applyAuthHeader(userData.token);
     setUser(userData);
     return userData;
   };
 
   const logout = () => {
+    applyAuthHeader(null);
     setUser(null);
   };
 
