@@ -1521,6 +1521,9 @@ p {
   border-radius: 999px;
   background: #f8fbff;
   color: #17324e;
+  padding: 8px 12px;
+  font-weight: 700;
+  cursor: pointer;
 }
 
 /* Search & Export Component Styles */
@@ -2172,10 +2175,6 @@ p {
     padding: 10px 12px;
     font-size: 0.9rem;
   }
-}
-  padding: 8px 12px;
-  font-weight: 700;
-  cursor: pointer;
 }
 
 .workflow-step.active {
