@@ -898,6 +898,153 @@ async def get_dashboard_trends(
     )
 
 
+@app.post("/api/export/excel")
+async def export_to_excel(
+    payload: dict = Body(...),
+    _: dict = Depends(require_role(["viewer", "analyst", "admin"])),
+):
+    """Export data to Excel format with formatting."""
+    try:
+        rows = payload.get("rows", [])
+        filename = payload.get("filename", "export") or "export"
+        filename = filename.replace(" ", "_")[:50]  # sanitize filename
+        
+        if not rows:
+            raise HTTPException(status_code=400, detail="No data to export")
+        
+        dataframe = pl.from_dicts(rows)
+        excel_buffer = io.BytesIO()
+        
+        # Use Polars' Excel writer via pyarrow
+        dataframe.write_excel(excel_buffer)
+        excel_buffer.seek(0)
+        
+        return StreamingResponse(
+            excel_buffer,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f"attachment; filename={filename}.xlsx"},
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Export failed: {str(e)}")
+
+
+@app.post("/api/export/parquet")
+async def export_to_parquet(
+    payload: dict = Body(...),
+    _: dict = Depends(require_role(["viewer", "analyst", "admin"])),
+):
+    """Export data to Parquet format for efficient storage."""
+    try:
+        rows = payload.get("rows", [])
+        filename = payload.get("filename", "export") or "export"
+        filename = filename.replace(" ", "_")[:50]  # sanitize filename
+        
+        if not rows:
+            raise HTTPException(status_code=400, detail="No data to export")
+        
+        dataframe = pl.from_dicts(rows)
+        parquet_buffer = io.BytesIO()
+        
+        # Write to Parquet format
+        dataframe.write_parquet(parquet_buffer)
+        parquet_buffer.seek(0)
+        
+        return StreamingResponse(
+            parquet_buffer,
+            media_type="application/octet-stream",
+            headers={"Content-Disposition": f"attachment; filename={filename}.parquet"},
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Export failed: {str(e)}")
+
+
+@app.post("/api/export/json")
+async def export_to_json(
+    payload: dict = Body(...),
+    _: dict = Depends(require_role(["viewer", "analyst", "admin"])),
+):
+    """Export data to JSON format."""
+    try:
+        rows = payload.get("rows", [])
+        filename = payload.get("filename", "export") or "export"
+        filename = filename.replace(" ", "_")[:50]  # sanitize filename
+        
+        if not rows:
+            raise HTTPException(status_code=400, detail="No data to export")
+        
+        json_buffer = io.BytesIO()
+        json_buffer.write(json.dumps(rows, indent=2, default=str).encode())
+        json_buffer.seek(0)
+        
+        return StreamingResponse(
+            json_buffer,
+            media_type="application/json",
+            headers={"Content-Disposition": f"attachment; filename={filename}.json"},
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Export failed: {str(e)}")
+
+
+class SearchRequest(BaseModel):
+    query: str | None = None
+    data_type: str | None = None  # "dataset", "report", "workflow"
+    owner: str | None = None
+    tags: list[str] | None = None
+    limit: int = 20
+    offset: int = 0
+
+
+@app.post("/api/search/catalog")
+async def search_catalog(
+    search_req: SearchRequest,
+    current_user: dict = Depends(require_role(["viewer", "analyst", "admin"])),
+):
+    """Advanced search across catalog with filtering."""
+    try:
+        limit = max(1, min(search_req.limit, 100))
+        offset = max(0, search_req.offset)
+        
+        all_entries = list_catalog_entries_for_user(current_user, limit=1000)
+        
+        # Filter by query (case-insensitive search in name/description)
+        if search_req.query:
+            query_lower = search_req.query.lower()
+            all_entries = [
+                e for e in all_entries
+                if query_lower in (e.get("name", "") or "").lower()
+                or query_lower in (e.get("description", "") or "").lower()
+            ]
+        
+        # Filter by data_type
+        if search_req.data_type:
+            all_entries = [e for e in all_entries if e.get("type") == search_req.data_type]
+        
+        # Filter by owner
+        if search_req.owner:
+            all_entries = [e for e in all_entries if e.get("owner") == search_req.owner]
+        
+        # Filter by tags (match any tag)
+        if search_req.tags:
+            all_entries = [
+                e for e in all_entries
+                if any(tag in (e.get("tags", []) or []) for tag in search_req.tags)
+            ]
+        
+        # Pagination
+        total_count = len(all_entries)
+        paginated = all_entries[offset : offset + limit]
+        
+        return {
+            "items": paginated,
+            "total": total_count,
+            "limit": limit,
+            "offset": offset,
+            "has_more": (offset + limit) < total_count,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
+
+
 @app.get("/api/workflows")
 async def get_workflows(_: dict = Depends(require_role(["viewer", "analyst", "admin"]))):
     return {"items": list_workflows()}

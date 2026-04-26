@@ -7,6 +7,7 @@ import WorkflowBuilder from './components/WorkflowBuilder';
 import MultiGraphPanel from './components/MultiGraphPanel';
 import AnalyticsWorkbench from './components/AnalyticsWorkbench';
 import GraphGallery from './components/GraphGallery';
+import SearchAndExport from './components/SearchAndExport';
 import { useAuth } from './context/AuthContext';
 import { API_BASE_URL } from './config';
 
@@ -831,6 +832,17 @@ export default function DashboardLayout() {
             </span>
           </button>
 
+          <button
+            type="button"
+            className={activeTab === 'search' ? 'sidebar-btn active' : 'sidebar-btn'}
+            onClick={() => setActiveTab('search')}
+          >
+            <span className="nav-item-content">
+              <span className="nav-icon">SE</span>
+              Search & Export
+            </span>
+          </button>
+
           {canAnalyze ? (
             <button
               type="button"
@@ -1219,6 +1231,8 @@ export default function DashboardLayout() {
           ) : null}
 
           {activeTab === 'graphs' ? <GraphGallery rows={rows} analysis={analysis} domainData={domainData} /> : null}
+
+          {activeTab === 'search' ? <SearchAndExport rows={rows} analysis={analysis} /> : null}
 
           {activeTab === 'predict' && canAnalyze ? (
             <div className="card stats-card">
