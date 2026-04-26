@@ -1,10 +1,10 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-const isGitHubActions = process.env.GITHUB_ACTIONS === 'true';
+const isProductionBuild = process.env.NODE_ENV === 'production';
 
 export default defineConfig({
-  base: isGitHubActions ? '/maste_data_analytics/' : '/',
+  base: isProductionBuild ? '/maste_data_analytics/' : '/',
   plugins: [react()],
   server: {
     port: 5173,
