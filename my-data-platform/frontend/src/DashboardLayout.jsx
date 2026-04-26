@@ -8,6 +8,7 @@ import MultiGraphPanel from './components/MultiGraphPanel';
 import AnalyticsWorkbench from './components/AnalyticsWorkbench';
 import GraphGallery from './components/GraphGallery';
 import SearchAndExport from './components/SearchAndExport';
+import DataQualityDashboard from './components/DataQualityDashboard';
 import { useAuth } from './context/AuthContext';
 import { API_BASE_URL } from './config';
 
@@ -843,6 +844,17 @@ export default function DashboardLayout() {
             </span>
           </button>
 
+          <button
+            type="button"
+            className={activeTab === 'quality' ? 'sidebar-btn active' : 'sidebar-btn'}
+            onClick={() => setActiveTab('quality')}
+          >
+            <span className="nav-item-content">
+              <span className="nav-icon">QA</span>
+              Data Quality
+            </span>
+          </button>
+
           {canAnalyze ? (
             <button
               type="button"
@@ -1233,6 +1245,8 @@ export default function DashboardLayout() {
           {activeTab === 'graphs' ? <GraphGallery rows={rows} analysis={analysis} domainData={domainData} /> : null}
 
           {activeTab === 'search' ? <SearchAndExport rows={rows} analysis={analysis} /> : null}
+
+          {activeTab === 'quality' ? <DataQualityDashboard rows={rows} /> : null}
 
           {activeTab === 'predict' && canAnalyze ? (
             <div className="card stats-card">

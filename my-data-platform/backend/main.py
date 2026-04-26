@@ -35,6 +35,7 @@ from report_generator import generate_structured_report_pdf, generate_structured
 from share_manager import create_share_link, get_share, increment_view_count, record_download, list_my_shares, revoke_share
 from executive_summary import generate_executive_summary
 from scheduled_exports import create_scheduled_export, get_schedule, list_schedules, update_schedule, record_run, delete_schedule
+from data_quality import calculate_data_quality_metrics, get_quality_report
 
 try:
     from openai import OpenAI
@@ -1043,6 +1044,52 @@ async def search_catalog(
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
+
+
+@app.post("/api/quality/score")
+async def score_data_quality(
+    payload: dict = Body(...),
+    _: dict = Depends(require_role(["viewer", "analyst", "admin"])),
+):
+    """Calculate comprehensive data quality metrics for a dataset."""
+    try:
+        rows = payload.get("rows", [])
+        
+        if not rows:
+            raise HTTPException(status_code=400, detail="No data to score")
+        
+        dataframe = pl.from_dicts(rows)
+        metrics = calculate_data_quality_metrics(dataframe)
+        
+        return {
+            "status": "success",
+            "metrics": metrics,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Quality scoring failed: {str(e)}")
+
+
+@app.post("/api/quality/report")
+async def generate_quality_report(
+    payload: dict = Body(...),
+    _: dict = Depends(require_role(["viewer", "analyst", "admin"])),
+):
+    """Generate a human-readable data quality report."""
+    try:
+        rows = payload.get("rows", [])
+        
+        if not rows:
+            raise HTTPException(status_code=400, detail="No data to analyze")
+        
+        dataframe = pl.from_dicts(rows)
+        report = get_quality_report(dataframe)
+        
+        return {
+            "status": "success",
+            "report": report,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Report generation failed: {str(e)}")
 
 
 @app.get("/api/workflows")
