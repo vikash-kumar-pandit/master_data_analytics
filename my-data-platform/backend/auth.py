@@ -8,16 +8,20 @@ import secrets
 import smtplib
 from datetime import datetime, timedelta, timezone
 from email.message import EmailMessage
-from . import email_templates
 from typing import Any
+import pathlib
 
 import jwt
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from passlib.context import CryptContext
 from pydantic import BaseModel, Field
-import pathlib
-from . import db
+
+# Handle both package and direct script imports
+try:
+    from . import email_templates, db
+except ImportError:
+    import email_templates, db
 
 
 SECRET_KEY = os.getenv("JWT_SECRET_KEY", "change-this-in-production-please-use-a-strong-32plus-char-secret")
@@ -65,20 +69,24 @@ _SEED_USERS = {
 
 # DB-backed storage. File path may be overridden with AUTH_DB_PATH env var.
 DB_PATH = os.getenv("AUTH_DB_PATH", str(pathlib.Path(__file__).parent / "auth.sqlite3"))
-db.init_db(DB_path := DB_PATH)
 
-# Seed demo users if they do not exist yet
-for username, user in _SEED_USERS.items():
-    if not db.get_user(DB_path, username):
-        db.create_user(
-            DB_path,
-            username,
-            pwd_context.hash(user["password"]),
-            user["role"],
-            user["email"],
-            user.get("verified", False),
-            datetime.now(timezone.utc),
-        )
+# Initialize DB and seed demo users (wrapped in try/except to handle import-time errors gracefully)
+try:
+    db.init_db(DB_path := DB_PATH)
+    # Seed demo users if they do not exist yet
+    for username, user in _SEED_USERS.items():
+        if not db.get_user(DB_path, username):
+            db.create_user(
+                DB_path,
+                username,
+                pwd_context.hash(user["password"]),
+                user["role"],
+                user["email"],
+                user.get("verified", False),
+                datetime.now(timezone.utc),
+            )
+except Exception as exc:
+    logger.error("Failed to initialize DB or seed users: %s", exc)
 
 _LOGIN_ATTEMPTS: dict[str, list[datetime]] = {}
 _REGISTER_ATTEMPTS: dict[str, list[datetime]] = {}
