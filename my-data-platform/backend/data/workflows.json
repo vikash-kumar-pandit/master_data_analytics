@@ -1,0 +1,18 @@
+[
+  {
+    "id": "c51c6b71-1b41-4b07-9026-73700bfcf019",
+    "name": "Smoke Workflow",
+    "description": "profile + clean",
+    "steps": [
+      "profile",
+      "clean"
+    ],
+    "target_column": null,
+    "text_column": null,
+    "categories": [],
+    "num_clusters": 3,
+    "sample_index": 0,
+    "top_k": 10,
+    "created_at": "2026-04-18T06:18:53.330625+00:00"
+  }
+]

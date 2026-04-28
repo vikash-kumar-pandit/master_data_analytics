@@ -1,0 +1,3185 @@
+[
+  {
+    "id": "2de76e19-0b60-42f7-9074-dcbbdc19f051",
+    "created_at": "2026-04-18T06:09:20.384748+00:00",
+    "fingerprint": "058e68fd94ae029c549db7a34480d1a8aaabbc1b8e4cf74390581359a1c153a5",
+    "dataset_name": "catalog_smoke.csv",
+    "action": "upload",
+    "source": "file_upload",
+    "target_column": null,
+    "summary": {
+      "action": "upload",
+      "dataset_name": "catalog_smoke.csv",
+      "rows": 2,
+      "cols": 3,
+      "domain": "Unknown",
+      "target_column": null,
+      "source": "file_upload"
+    },
+    "analysis": {
+      "category": "Retail",
+      "rows": 2,
+      "cols": 3,
+      "column_info": [
+        "name",
+        "sales",
+        "profit"
+      ],
+      "null_counts": [
+        {
+          "name": 0,
+          "sales": 0,
+          "profit": 0
+        }
+      ],
+      "audit_errors": [],
+      "domain_info": {
+        "domain": "Unknown",
+        "confidence": 0,
+        "columns": [],
+        "error": "OpenAI package is not installed."
+      }
+    },
+    "cleaning_stats": [],
+    "ml_results": {}
+  },
+  {
+    "id": "0f133477-5282-488e-88d0-fee908a7a0ff",
+    "created_at": "2026-04-18T06:14:09.980026+00:00",
+    "fingerprint": "7e53cf527c6325f40afed21224cc9d798eb6f7902471e0de7fc4f89890c11ec2",
+    "dataset_name": "smoke.json",
+    "action": "upload",
+    "source": "file_upload",
+    "target_column": null,
+    "summary": {
+      "action": "upload",
+      "dataset_name": "smoke.json",
+      "rows": 1,
+      "cols": 2,
+      "domain": "Unknown",
+      "target_column": null,
+      "source": "file_upload"
+    },
+    "analysis": {
+      "category": "Retail",
+      "rows": 1,
+      "cols": 2,
+      "column_info": [
+        "name",
+        "sales"
+      ],
+      "null_counts": [
+        {
+          "name": 0,
+          "sales": 0
+        }
+      ],
+      "audit_errors": [],
+      "domain_info": {
+        "domain": "Unknown",
+        "confidence": 0,
+        "columns": [],
+        "error": "OpenAI package is not installed."
+      }
+    },
+    "cleaning_stats": [],
+    "ml_results": {}
+  },
+  {
+    "id": "a55c5eb6-ddf7-430f-a3e0-a81c8a5e7c0a",
+    "created_at": "2026-04-18T06:18:53.362272+00:00",
+    "fingerprint": "6c4cdfd5452ccf53227a814ed01f550af384b1f2e7a5d9648cbffdbea057626f",
+    "dataset_name": "Smoke Workflow",
+    "action": "workflow",
+    "source": "workflow_builder",
+    "target_column": null,
+    "summary": {
+      "action": "workflow",
+      "dataset_name": "Smoke Workflow",
+      "rows": 2,
+      "cols": 3,
+      "domain": "Unknown",
+      "target_column": null,
+      "source": "workflow_builder"
+    },
+    "analysis": {
+      "category": "Retail",
+      "rows": 2,
+      "cols": 3,
+      "column_info": [
+        "sales",
+        "name",
+        "city"
+      ],
+      "null_counts": [
+        {
+          "sales": 0,
+          "name": 0,
+          "city": 0
+        }
+      ],
+      "audit_errors": [],
+      "domain_info": {
+        "domain": "Unknown",
+        "confidence": 0,
+        "columns": [],
+        "error": "OpenAI package is not installed."
+      }
+    },
+    "cleaning_stats": [
+      {
+        "columnName": "sales",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "name",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "city",
+        "missingBefore": 0,
+        "missingAfter": 0
+      }
+    ],
+    "ml_results": {}
+  },
+  {
+    "id": "107c7ee0-4fbb-4dd2-bedc-94aba236c932",
+    "created_at": "2026-04-18T07:03:37.139447+00:00",
+    "fingerprint": "03de95041b9c854411d14b1ae665cc44f527ed1a1d3f89304639bb62164aca8b",
+    "dataset_name": "Superstore.csv",
+    "action": "upload",
+    "source": "file_upload",
+    "target_column": null,
+    "created_by": {
+      "username": "admin_user",
+      "role": "admin"
+    },
+    "summary": {
+      "action": "upload",
+      "dataset_name": "Superstore.csv",
+      "rows": 9994,
+      "cols": 21,
+      "domain": "Unknown",
+      "target_column": null,
+      "source": "file_upload",
+      "owner": "admin_user"
+    },
+    "analysis": {
+      "category": "Retail",
+      "rows": 9994,
+      "cols": 21,
+      "column_info": [
+        "Row ID",
+        "Order ID",
+        "Order Date",
+        "Ship Date",
+        "Ship Mode",
+        "Customer ID",
+        "Customer Name",
+        "Segment",
+        "Country",
+        "City",
+        "State",
+        "Postal Code",
+        "Region",
+        "Product ID",
+        "Category",
+        "Sub-Category",
+        "Product Name",
+        "Sales",
+        "Quantity",
+        "Discount",
+        "Profit"
+      ],
+      "null_counts": [
+        {
+          "Row ID": 0,
+          "Order ID": 0,
+          "Order Date": 0,
+          "Ship Date": 0,
+          "Ship Mode": 0,
+          "Customer ID": 0,
+          "Customer Name": 0,
+          "Segment": 0,
+          "Country": 0,
+          "City": 0,
+          "State": 0,
+          "Postal Code": 0,
+          "Region": 0,
+          "Product ID": 0,
+          "Category": 0,
+          "Sub-Category": 0,
+          "Product Name": 0,
+          "Sales": 0,
+          "Quantity": 0,
+          "Discount": 0,
+          "Profit": 0
+        }
+      ],
+      "audit_errors": [],
+      "domain_info": {
+        "domain": "Unknown",
+        "confidence": 0,
+        "columns": [],
+        "error": "OpenAI package is not installed."
+      }
+    },
+    "cleaning_stats": [],
+    "ml_results": {}
+  },
+  {
+    "id": "2eecfae7-0105-4d0a-9a48-f85966a369e3",
+    "created_at": "2026-04-18T07:05:10.788882+00:00",
+    "fingerprint": "ba0c4ab014afac6dc1325dadc18d69572e27f1debb9cb813d796202a0980c96f",
+    "dataset_name": "Superstore.csv",
+    "action": "clean",
+    "source": "file_upload",
+    "target_column": null,
+    "created_by": {
+      "username": "admin_user",
+      "role": "admin"
+    },
+    "summary": {
+      "action": "clean",
+      "dataset_name": "Superstore.csv",
+      "rows": 9994,
+      "cols": 21,
+      "domain": "Unknown",
+      "target_column": null,
+      "source": "file_upload",
+      "owner": "admin_user"
+    },
+    "analysis": {
+      "category": "Retail",
+      "rows": 9994,
+      "cols": 21,
+      "column_info": [
+        "row_id",
+        "order_id",
+        "order_date",
+        "ship_date",
+        "ship_mode",
+        "customer_id",
+        "customer_name",
+        "segment",
+        "country",
+        "city",
+        "state",
+        "postal_code",
+        "region",
+        "product_id",
+        "category",
+        "sub-category",
+        "product_name",
+        "sales",
+        "quantity",
+        "discount",
+        "profit"
+      ],
+      "null_counts": [
+        {
+          "row_id": 0,
+          "order_id": 0,
+          "order_date": 0,
+          "ship_date": 0,
+          "ship_mode": 0,
+          "customer_id": 0,
+          "customer_name": 0,
+          "segment": 0,
+          "country": 0,
+          "city": 0,
+          "state": 0,
+          "postal_code": 0,
+          "region": 0,
+          "product_id": 0,
+          "category": 0,
+          "sub-category": 0,
+          "product_name": 0,
+          "sales": 0,
+          "quantity": 0,
+          "discount": 0,
+          "profit": 0
+        }
+      ],
+      "audit_errors": [],
+      "domain_info": {
+        "domain": "Unknown",
+        "confidence": 0,
+        "columns": [],
+        "error": "OpenAI package is not installed."
+      }
+    },
+    "cleaning_stats": [
+      {
+        "columnName": "Row ID",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Order ID",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Order Date",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Ship Date",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Ship Mode",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Customer ID",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Customer Name",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Segment",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Country",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "City",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "State",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Postal Code",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Region",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Product ID",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Category",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Sub-Category",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Product Name",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Sales",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Quantity",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Discount",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Profit",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "row_id",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "order_id",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "order_date",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "ship_date",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "ship_mode",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "customer_id",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "customer_name",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "segment",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "country",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "city",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "state",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "postal_code",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "region",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "product_id",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "category",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "sub-category",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "product_name",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "sales",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "quantity",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "discount",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "profit",
+        "missingBefore": 0,
+        "missingAfter": 0
+      }
+    ],
+    "ml_results": {}
+  },
+  {
+    "id": "94548216-ce7a-41eb-ba64-9a4a4b3b82dd",
+    "created_at": "2026-04-18T07:11:57.858918+00:00",
+    "fingerprint": "00a9ee3cb3eb9af6120f8f972aecc5c5e2ba13d6069925de172280d63a1aaea2",
+    "dataset_name": "Superstore.csv",
+    "action": "upload",
+    "source": "file_upload",
+    "target_column": null,
+    "created_by": {
+      "username": "data_analyst",
+      "role": "analyst"
+    },
+    "summary": {
+      "action": "upload",
+      "dataset_name": "Superstore.csv",
+      "rows": 9994,
+      "cols": 21,
+      "domain": "Unknown",
+      "target_column": null,
+      "source": "file_upload",
+      "owner": "data_analyst"
+    },
+    "analysis": {
+      "category": "Retail",
+      "rows": 9994,
+      "cols": 21,
+      "column_info": [
+        "Row ID",
+        "Order ID",
+        "Order Date",
+        "Ship Date",
+        "Ship Mode",
+        "Customer ID",
+        "Customer Name",
+        "Segment",
+        "Country",
+        "City",
+        "State",
+        "Postal Code",
+        "Region",
+        "Product ID",
+        "Category",
+        "Sub-Category",
+        "Product Name",
+        "Sales",
+        "Quantity",
+        "Discount",
+        "Profit"
+      ],
+      "null_counts": [
+        {
+          "Row ID": 0,
+          "Order ID": 0,
+          "Order Date": 0,
+          "Ship Date": 0,
+          "Ship Mode": 0,
+          "Customer ID": 0,
+          "Customer Name": 0,
+          "Segment": 0,
+          "Country": 0,
+          "City": 0,
+          "State": 0,
+          "Postal Code": 0,
+          "Region": 0,
+          "Product ID": 0,
+          "Category": 0,
+          "Sub-Category": 0,
+          "Product Name": 0,
+          "Sales": 0,
+          "Quantity": 0,
+          "Discount": 0,
+          "Profit": 0
+        }
+      ],
+      "audit_errors": [],
+      "domain_info": {
+        "domain": "Unknown",
+        "confidence": 0,
+        "columns": [],
+        "error": "OpenAI package is not installed."
+      }
+    },
+    "cleaning_stats": [],
+    "ml_results": {}
+  },
+  {
+    "id": "b99a04d3-4489-4993-83a1-deb98e4f4030",
+    "created_at": "2026-04-18T07:12:19.283041+00:00",
+    "fingerprint": "00a9ee3cb3eb9af6120f8f972aecc5c5e2ba13d6069925de172280d63a1aaea2",
+    "dataset_name": "Superstore.csv",
+    "action": "upload",
+    "source": "file_upload",
+    "target_column": null,
+    "created_by": {
+      "username": "data_analyst",
+      "role": "analyst"
+    },
+    "summary": {
+      "action": "upload",
+      "dataset_name": "Superstore.csv",
+      "rows": 9994,
+      "cols": 21,
+      "domain": "Unknown",
+      "target_column": null,
+      "source": "file_upload",
+      "owner": "data_analyst"
+    },
+    "analysis": {
+      "category": "Retail",
+      "rows": 9994,
+      "cols": 21,
+      "column_info": [
+        "Row ID",
+        "Order ID",
+        "Order Date",
+        "Ship Date",
+        "Ship Mode",
+        "Customer ID",
+        "Customer Name",
+        "Segment",
+        "Country",
+        "City",
+        "State",
+        "Postal Code",
+        "Region",
+        "Product ID",
+        "Category",
+        "Sub-Category",
+        "Product Name",
+        "Sales",
+        "Quantity",
+        "Discount",
+        "Profit"
+      ],
+      "null_counts": [
+        {
+          "Row ID": 0,
+          "Order ID": 0,
+          "Order Date": 0,
+          "Ship Date": 0,
+          "Ship Mode": 0,
+          "Customer ID": 0,
+          "Customer Name": 0,
+          "Segment": 0,
+          "Country": 0,
+          "City": 0,
+          "State": 0,
+          "Postal Code": 0,
+          "Region": 0,
+          "Product ID": 0,
+          "Category": 0,
+          "Sub-Category": 0,
+          "Product Name": 0,
+          "Sales": 0,
+          "Quantity": 0,
+          "Discount": 0,
+          "Profit": 0
+        }
+      ],
+      "audit_errors": [],
+      "domain_info": {
+        "domain": "Unknown",
+        "confidence": 0,
+        "columns": [],
+        "error": "OpenAI package is not installed."
+      }
+    },
+    "cleaning_stats": [],
+    "ml_results": {}
+  },
+  {
+    "id": "de4e3bba-80b7-4a02-99c4-26e326da0345",
+    "created_at": "2026-04-18T07:58:38.023025+00:00",
+    "fingerprint": "00a9ee3cb3eb9af6120f8f972aecc5c5e2ba13d6069925de172280d63a1aaea2",
+    "dataset_name": "Superstore.csv",
+    "action": "upload",
+    "source": "file_upload",
+    "target_column": null,
+    "created_by": {
+      "username": "data_analyst",
+      "role": "analyst"
+    },
+    "summary": {
+      "action": "upload",
+      "dataset_name": "Superstore.csv",
+      "rows": 9994,
+      "cols": 21,
+      "domain": "Unknown",
+      "target_column": null,
+      "source": "file_upload",
+      "owner": "data_analyst"
+    },
+    "analysis": {
+      "category": "Retail",
+      "rows": 9994,
+      "cols": 21,
+      "column_info": [
+        "Row ID",
+        "Order ID",
+        "Order Date",
+        "Ship Date",
+        "Ship Mode",
+        "Customer ID",
+        "Customer Name",
+        "Segment",
+        "Country",
+        "City",
+        "State",
+        "Postal Code",
+        "Region",
+        "Product ID",
+        "Category",
+        "Sub-Category",
+        "Product Name",
+        "Sales",
+        "Quantity",
+        "Discount",
+        "Profit"
+      ],
+      "null_counts": [
+        {
+          "Row ID": 0,
+          "Order ID": 0,
+          "Order Date": 0,
+          "Ship Date": 0,
+          "Ship Mode": 0,
+          "Customer ID": 0,
+          "Customer Name": 0,
+          "Segment": 0,
+          "Country": 0,
+          "City": 0,
+          "State": 0,
+          "Postal Code": 0,
+          "Region": 0,
+          "Product ID": 0,
+          "Category": 0,
+          "Sub-Category": 0,
+          "Product Name": 0,
+          "Sales": 0,
+          "Quantity": 0,
+          "Discount": 0,
+          "Profit": 0
+        }
+      ],
+      "audit_errors": [],
+      "domain_info": {
+        "domain": "Unknown",
+        "confidence": 0,
+        "columns": [],
+        "error": "OpenAI package is not installed."
+      }
+    },
+    "cleaning_stats": [],
+    "ml_results": {}
+  },
+  {
+    "id": "d72a55f7-bcea-4294-8d87-d07c62270d3a",
+    "created_at": "2026-04-18T08:00:05.771094+00:00",
+    "fingerprint": "45dbd1c20ecd1cdd4b1d485020c062494a17183380fe22531683a0cc0e685464",
+    "dataset_name": "Superstore.csv",
+    "action": "clean",
+    "source": "file_upload",
+    "target_column": null,
+    "created_by": {
+      "username": "data_analyst",
+      "role": "analyst"
+    },
+    "summary": {
+      "action": "clean",
+      "dataset_name": "Superstore.csv",
+      "rows": 9994,
+      "cols": 21,
+      "domain": "Unknown",
+      "target_column": null,
+      "source": "file_upload",
+      "owner": "data_analyst"
+    },
+    "analysis": {
+      "category": "Retail",
+      "rows": 9994,
+      "cols": 21,
+      "column_info": [
+        "row_id",
+        "order_id",
+        "order_date",
+        "ship_date",
+        "ship_mode",
+        "customer_id",
+        "customer_name",
+        "segment",
+        "country",
+        "city",
+        "state",
+        "postal_code",
+        "region",
+        "product_id",
+        "category",
+        "sub-category",
+        "product_name",
+        "sales",
+        "quantity",
+        "discount",
+        "profit"
+      ],
+      "null_counts": [
+        {
+          "row_id": 0,
+          "order_id": 0,
+          "order_date": 0,
+          "ship_date": 0,
+          "ship_mode": 0,
+          "customer_id": 0,
+          "customer_name": 0,
+          "segment": 0,
+          "country": 0,
+          "city": 0,
+          "state": 0,
+          "postal_code": 0,
+          "region": 0,
+          "product_id": 0,
+          "category": 0,
+          "sub-category": 0,
+          "product_name": 0,
+          "sales": 0,
+          "quantity": 0,
+          "discount": 0,
+          "profit": 0
+        }
+      ],
+      "audit_errors": [],
+      "domain_info": {
+        "domain": "Unknown",
+        "confidence": 0,
+        "columns": [],
+        "error": "OpenAI package is not installed."
+      }
+    },
+    "cleaning_stats": [
+      {
+        "columnName": "Row ID",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Order ID",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Order Date",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Ship Date",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Ship Mode",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Customer ID",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Customer Name",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Segment",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Country",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "City",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "State",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Postal Code",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Region",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Product ID",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Category",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Sub-Category",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Product Name",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Sales",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Quantity",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Discount",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Profit",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "row_id",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "order_id",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "order_date",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "ship_date",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "ship_mode",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "customer_id",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "customer_name",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "segment",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "country",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "city",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "state",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "postal_code",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "region",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "product_id",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "category",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "sub-category",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "product_name",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "sales",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "quantity",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "discount",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "profit",
+        "missingBefore": 0,
+        "missingAfter": 0
+      }
+    ],
+    "ml_results": {}
+  },
+  {
+    "id": "3d7cbd29-1611-44e3-ab00-42e8b01584d1",
+    "created_at": "2026-04-18T08:34:12.992887+00:00",
+    "fingerprint": "32dde54e1ba4728dd8122c468eb9cd979f802dce200a6736d1e8ff61d7ace2b9",
+    "dataset_name": "sample.csv",
+    "action": "upload",
+    "source": "file_upload",
+    "target_column": null,
+    "created_by": {
+      "username": "data_analyst",
+      "role": "analyst"
+    },
+    "summary": {
+      "action": "upload",
+      "dataset_name": "sample.csv",
+      "rows": 2,
+      "cols": 2,
+      "domain": "Unknown",
+      "target_column": null,
+      "source": "file_upload",
+      "owner": "data_analyst"
+    },
+    "analysis": {
+      "category": "Generic",
+      "rows": 2,
+      "cols": 2,
+      "column_info": [
+        "name",
+        "value"
+      ],
+      "null_counts": [
+        {
+          "name": 0,
+          "value": 0
+        }
+      ],
+      "audit_errors": [],
+      "domain_info": {
+        "domain": "Unknown",
+        "confidence": 0,
+        "columns": [],
+        "error": "OpenAI package is not installed."
+      }
+    },
+    "cleaning_stats": [],
+    "ml_results": {}
+  },
+  {
+    "id": "c0576c86-a150-4d49-8dfb-7ca34597ab23",
+    "created_at": "2026-04-18T08:35:27.805492+00:00",
+    "fingerprint": "32dde54e1ba4728dd8122c468eb9cd979f802dce200a6736d1e8ff61d7ace2b9",
+    "dataset_name": "sample.csv",
+    "action": "upload",
+    "source": "file_upload",
+    "target_column": null,
+    "created_by": {
+      "username": "data_analyst",
+      "role": "analyst"
+    },
+    "summary": {
+      "action": "upload",
+      "dataset_name": "sample.csv",
+      "rows": 2,
+      "cols": 2,
+      "domain": "Unknown",
+      "target_column": null,
+      "source": "file_upload",
+      "owner": "data_analyst"
+    },
+    "analysis": {
+      "category": "Generic",
+      "rows": 2,
+      "cols": 2,
+      "column_info": [
+        "name",
+        "value"
+      ],
+      "null_counts": [
+        {
+          "name": 0,
+          "value": 0
+        }
+      ],
+      "audit_errors": [],
+      "domain_info": {
+        "domain": "Unknown",
+        "confidence": 0,
+        "columns": [],
+        "error": "OpenAI package is not installed."
+      }
+    },
+    "cleaning_stats": [],
+    "ml_results": {}
+  },
+  {
+    "id": "6c730a0b-c9df-457c-a1af-b374d6b0303d",
+    "created_at": "2026-04-18T08:37:08.773906+00:00",
+    "fingerprint": "32dde54e1ba4728dd8122c468eb9cd979f802dce200a6736d1e8ff61d7ace2b9",
+    "dataset_name": "sample.csv",
+    "action": "upload",
+    "source": "file_upload",
+    "target_column": null,
+    "created_by": {
+      "username": "data_analyst",
+      "role": "analyst"
+    },
+    "summary": {
+      "action": "upload",
+      "dataset_name": "sample.csv",
+      "rows": 2,
+      "cols": 2,
+      "domain": "Unknown",
+      "target_column": null,
+      "source": "file_upload",
+      "owner": "data_analyst"
+    },
+    "analysis": {
+      "category": "Generic",
+      "rows": 2,
+      "cols": 2,
+      "column_info": [
+        "name",
+        "value"
+      ],
+      "null_counts": [
+        {
+          "name": 0,
+          "value": 0
+        }
+      ],
+      "audit_errors": [],
+      "domain_info": {
+        "domain": "Unknown",
+        "confidence": 0,
+        "columns": [],
+        "error": "OpenAI package is not installed."
+      }
+    },
+    "cleaning_stats": [],
+    "ml_results": {}
+  },
+  {
+    "id": "e3a99473-a81b-49fa-bd6e-6b3650cf6ed8",
+    "created_at": "2026-04-18T08:39:06.503607+00:00",
+    "fingerprint": "32dde54e1ba4728dd8122c468eb9cd979f802dce200a6736d1e8ff61d7ace2b9",
+    "dataset_name": "sample.csv",
+    "action": "upload",
+    "source": "file_upload",
+    "target_column": null,
+    "created_by": {
+      "username": "data_analyst",
+      "role": "analyst"
+    },
+    "summary": {
+      "action": "upload",
+      "dataset_name": "sample.csv",
+      "rows": 2,
+      "cols": 2,
+      "domain": "Unknown",
+      "target_column": null,
+      "source": "file_upload",
+      "owner": "data_analyst"
+    },
+    "analysis": {
+      "category": "Generic",
+      "rows": 2,
+      "cols": 2,
+      "column_info": [
+        "name",
+        "value"
+      ],
+      "null_counts": [
+        {
+          "name": 0,
+          "value": 0
+        }
+      ],
+      "audit_errors": [],
+      "domain_info": {
+        "domain": "Unknown",
+        "confidence": 0,
+        "columns": [],
+        "error": "OpenAI package is not installed."
+      }
+    },
+    "cleaning_stats": [],
+    "ml_results": {}
+  },
+  {
+    "id": "fda57595-9858-4d51-8cd1-bff418bbfd73",
+    "created_at": "2026-04-18T09:00:18.391757+00:00",
+    "fingerprint": "32dde54e1ba4728dd8122c468eb9cd979f802dce200a6736d1e8ff61d7ace2b9",
+    "dataset_name": "sample.csv",
+    "action": "upload",
+    "source": "file_upload",
+    "target_column": null,
+    "created_by": {
+      "username": "data_analyst",
+      "role": "analyst"
+    },
+    "summary": {
+      "action": "upload",
+      "dataset_name": "sample.csv",
+      "rows": 2,
+      "cols": 2,
+      "domain": "Unknown",
+      "target_column": null,
+      "source": "file_upload",
+      "owner": "data_analyst"
+    },
+    "analysis": {
+      "category": "Generic",
+      "rows": 2,
+      "cols": 2,
+      "column_info": [
+        "name",
+        "value"
+      ],
+      "null_counts": [
+        {
+          "name": 0,
+          "value": 0
+        }
+      ],
+      "audit_errors": [],
+      "domain_info": {
+        "domain": "Unknown",
+        "confidence": 0,
+        "columns": [],
+        "error": "OpenAI package is not installed."
+      }
+    },
+    "cleaning_stats": [],
+    "ml_results": {}
+  },
+  {
+    "id": "40ae58ff-6668-40af-afcf-e0db5e5f9677",
+    "created_at": "2026-04-18T09:17:48.031996+00:00",
+    "fingerprint": "00a9ee3cb3eb9af6120f8f972aecc5c5e2ba13d6069925de172280d63a1aaea2",
+    "dataset_name": "Superstore.csv",
+    "action": "upload",
+    "source": "file_upload",
+    "target_column": null,
+    "created_by": {
+      "username": "data_analyst",
+      "role": "analyst"
+    },
+    "summary": {
+      "action": "upload",
+      "dataset_name": "Superstore.csv",
+      "rows": 9994,
+      "cols": 21,
+      "domain": "Unknown",
+      "target_column": null,
+      "source": "file_upload",
+      "owner": "data_analyst"
+    },
+    "analysis": {
+      "category": "Retail",
+      "rows": 9994,
+      "cols": 21,
+      "column_info": [
+        "Row ID",
+        "Order ID",
+        "Order Date",
+        "Ship Date",
+        "Ship Mode",
+        "Customer ID",
+        "Customer Name",
+        "Segment",
+        "Country",
+        "City",
+        "State",
+        "Postal Code",
+        "Region",
+        "Product ID",
+        "Category",
+        "Sub-Category",
+        "Product Name",
+        "Sales",
+        "Quantity",
+        "Discount",
+        "Profit"
+      ],
+      "null_counts": [
+        {
+          "Row ID": 0,
+          "Order ID": 0,
+          "Order Date": 0,
+          "Ship Date": 0,
+          "Ship Mode": 0,
+          "Customer ID": 0,
+          "Customer Name": 0,
+          "Segment": 0,
+          "Country": 0,
+          "City": 0,
+          "State": 0,
+          "Postal Code": 0,
+          "Region": 0,
+          "Product ID": 0,
+          "Category": 0,
+          "Sub-Category": 0,
+          "Product Name": 0,
+          "Sales": 0,
+          "Quantity": 0,
+          "Discount": 0,
+          "Profit": 0
+        }
+      ],
+      "audit_errors": [],
+      "domain_info": {
+        "domain": "Unknown",
+        "confidence": 0,
+        "columns": [],
+        "error": "OpenAI package is not installed."
+      }
+    },
+    "cleaning_stats": [],
+    "ml_results": {}
+  },
+  {
+    "id": "85b34dec-f90c-4351-8cc0-d6858e401b85",
+    "created_at": "2026-04-18T09:18:15.384043+00:00",
+    "fingerprint": "a1f9001849195c8ba224c643311acc54a90f0eb949b71583fae85a0f740a5c84",
+    "dataset_name": "Superstore.csv",
+    "action": "clean",
+    "source": "file_upload",
+    "target_column": null,
+    "created_by": {
+      "username": "data_analyst",
+      "role": "analyst"
+    },
+    "summary": {
+      "action": "clean",
+      "dataset_name": "Superstore.csv",
+      "rows": 9994,
+      "cols": 21,
+      "domain": "Unknown",
+      "target_column": null,
+      "source": "file_upload",
+      "owner": "data_analyst"
+    },
+    "analysis": {
+      "category": "Retail",
+      "rows": 9994,
+      "cols": 21,
+      "column_info": [
+        "row_id",
+        "order_id",
+        "order_date",
+        "ship_date",
+        "ship_mode",
+        "customer_id",
+        "customer_name",
+        "segment",
+        "country",
+        "city",
+        "state",
+        "postal_code",
+        "region",
+        "product_id",
+        "category",
+        "sub-category",
+        "product_name",
+        "sales",
+        "quantity",
+        "discount",
+        "profit"
+      ],
+      "null_counts": [
+        {
+          "row_id": 0,
+          "order_id": 0,
+          "order_date": 0,
+          "ship_date": 0,
+          "ship_mode": 0,
+          "customer_id": 0,
+          "customer_name": 0,
+          "segment": 0,
+          "country": 0,
+          "city": 0,
+          "state": 0,
+          "postal_code": 0,
+          "region": 0,
+          "product_id": 0,
+          "category": 0,
+          "sub-category": 0,
+          "product_name": 0,
+          "sales": 0,
+          "quantity": 0,
+          "discount": 0,
+          "profit": 0
+        }
+      ],
+      "audit_errors": [],
+      "domain_info": {
+        "domain": "Unknown",
+        "confidence": 0,
+        "columns": [],
+        "error": "OpenAI package is not installed."
+      }
+    },
+    "cleaning_stats": [
+      {
+        "columnName": "Row ID",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Order ID",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Order Date",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Ship Date",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Ship Mode",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Customer ID",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Customer Name",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Segment",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Country",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "City",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "State",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Postal Code",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Region",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Product ID",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Category",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Sub-Category",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Product Name",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Sales",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Quantity",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Discount",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Profit",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "row_id",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "order_id",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "order_date",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "ship_date",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "ship_mode",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "customer_id",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "customer_name",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "segment",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "country",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "city",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "state",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "postal_code",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "region",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "product_id",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "category",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "sub-category",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "product_name",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "sales",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "quantity",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "discount",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "profit",
+        "missingBefore": 0,
+        "missingAfter": 0
+      }
+    ],
+    "ml_results": {}
+  },
+  {
+    "id": "a72859ca-c4f6-409a-9a65-5f488f45af55",
+    "created_at": "2026-04-18T09:19:00.402212+00:00",
+    "fingerprint": "ba22ac7c12ecc09ee2b5cf4f354108331c59526b4f490dc22f996d3ac34ee147",
+    "dataset_name": "Superstore.csv",
+    "action": "arrange",
+    "source": "file_upload",
+    "target_column": null,
+    "created_by": {
+      "username": "data_analyst",
+      "role": "analyst"
+    },
+    "summary": {
+      "action": "arrange",
+      "dataset_name": "Superstore.csv",
+      "rows": 9994,
+      "cols": 21,
+      "domain": "Unknown",
+      "target_column": null,
+      "source": "file_upload",
+      "owner": "data_analyst"
+    },
+    "analysis": {
+      "category": "Retail",
+      "rows": 9994,
+      "cols": 21,
+      "column_info": [
+        "Product ID",
+        "Category",
+        "Product Name",
+        "City",
+        "Country",
+        "Customer ID",
+        "Customer Name",
+        "Discount",
+        "Order Date",
+        "Order ID",
+        "Postal Code",
+        "Profit",
+        "Quantity",
+        "Region",
+        "Row ID",
+        "Sales",
+        "Segment",
+        "Ship Date",
+        "Ship Mode",
+        "State",
+        "Sub-Category"
+      ],
+      "null_counts": [
+        {
+          "Product ID": 0,
+          "Category": 0,
+          "Product Name": 0,
+          "City": 0,
+          "Country": 0,
+          "Customer ID": 0,
+          "Customer Name": 0,
+          "Discount": 0,
+          "Order Date": 0,
+          "Order ID": 0,
+          "Postal Code": 0,
+          "Profit": 0,
+          "Quantity": 0,
+          "Region": 0,
+          "Row ID": 0,
+          "Sales": 0,
+          "Segment": 0,
+          "Ship Date": 0,
+          "Ship Mode": 0,
+          "State": 0,
+          "Sub-Category": 0
+        }
+      ],
+      "audit_errors": [],
+      "domain_info": {
+        "domain": "Unknown",
+        "confidence": 0,
+        "columns": [],
+        "error": "OpenAI package is not installed."
+      }
+    },
+    "cleaning_stats": [
+      {
+        "columnName": "Row ID",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Order ID",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Order Date",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Ship Date",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Ship Mode",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Customer ID",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Customer Name",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Segment",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Country",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "City",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "State",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Postal Code",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Region",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Product ID",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Category",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Sub-Category",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Product Name",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Sales",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Quantity",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Discount",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Profit",
+        "missingBefore": 0,
+        "missingAfter": 0
+      }
+    ],
+    "ml_results": {}
+  },
+  {
+    "id": "faec9c79-703b-4ed8-a6be-4f1209335187",
+    "created_at": "2026-04-18T09:19:43.170472+00:00",
+    "fingerprint": "9e19d517a572eacbb6434db3d66efe629b797041ce218101860e6cab8e85959d",
+    "dataset_name": null,
+    "action": "question",
+    "source": "question_answering",
+    "target_column": null,
+    "created_by": {
+      "username": "data_analyst",
+      "role": "analyst"
+    },
+    "summary": {
+      "action": "question",
+      "dataset_name": null,
+      "rows": 9994,
+      "cols": 21,
+      "domain": null,
+      "target_column": null,
+      "source": "question_answering",
+      "owner": "data_analyst"
+    },
+    "analysis": {
+      "rows": 9994,
+      "cols": 21,
+      "question": "Profit kyo gir gaya?",
+      "intent": "compare"
+    },
+    "cleaning_stats": [],
+    "ml_results": {}
+  },
+  {
+    "id": "7a10bfe1-d61b-4742-b0f8-3d6e88240520",
+    "created_at": "2026-04-18T09:21:00.875480+00:00",
+    "fingerprint": "54ca254688a9f2f0f07c8f01ab1b150b1fa3c24b94a7390c334a946c25cefa29",
+    "dataset_name": null,
+    "action": "forecast",
+    "source": "forecasting",
+    "target_column": null,
+    "created_by": {
+      "username": "data_analyst",
+      "role": "analyst"
+    },
+    "summary": {
+      "action": "forecast",
+      "dataset_name": null,
+      "rows": 9994,
+      "cols": 21,
+      "domain": null,
+      "target_column": null,
+      "source": "forecasting",
+      "owner": "data_analyst"
+    },
+    "analysis": {
+      "rows": 9994,
+      "cols": 21,
+      "metric_column": null,
+      "date_column": null
+    },
+    "cleaning_stats": [],
+    "ml_results": {}
+  },
+  {
+    "id": "dc696f6d-4b3a-4562-a478-ee95cbf908d6",
+    "created_at": "2026-04-18T09:29:11.954547+00:00",
+    "fingerprint": "00a9ee3cb3eb9af6120f8f972aecc5c5e2ba13d6069925de172280d63a1aaea2",
+    "dataset_name": "Superstore.csv",
+    "action": "upload",
+    "source": "file_upload",
+    "target_column": null,
+    "created_by": {
+      "username": "data_analyst",
+      "role": "analyst"
+    },
+    "summary": {
+      "action": "upload",
+      "dataset_name": "Superstore.csv",
+      "rows": 9994,
+      "cols": 21,
+      "domain": "Unknown",
+      "target_column": null,
+      "source": "file_upload",
+      "owner": "data_analyst"
+    },
+    "analysis": {
+      "category": "Retail",
+      "rows": 9994,
+      "cols": 21,
+      "column_info": [
+        "Row ID",
+        "Order ID",
+        "Order Date",
+        "Ship Date",
+        "Ship Mode",
+        "Customer ID",
+        "Customer Name",
+        "Segment",
+        "Country",
+        "City",
+        "State",
+        "Postal Code",
+        "Region",
+        "Product ID",
+        "Category",
+        "Sub-Category",
+        "Product Name",
+        "Sales",
+        "Quantity",
+        "Discount",
+        "Profit"
+      ],
+      "null_counts": [
+        {
+          "Row ID": 0,
+          "Order ID": 0,
+          "Order Date": 0,
+          "Ship Date": 0,
+          "Ship Mode": 0,
+          "Customer ID": 0,
+          "Customer Name": 0,
+          "Segment": 0,
+          "Country": 0,
+          "City": 0,
+          "State": 0,
+          "Postal Code": 0,
+          "Region": 0,
+          "Product ID": 0,
+          "Category": 0,
+          "Sub-Category": 0,
+          "Product Name": 0,
+          "Sales": 0,
+          "Quantity": 0,
+          "Discount": 0,
+          "Profit": 0
+        }
+      ],
+      "audit_errors": [],
+      "domain_info": {
+        "domain": "Unknown",
+        "confidence": 0,
+        "columns": [],
+        "error": "OpenAI package is not installed."
+      }
+    },
+    "cleaning_stats": [],
+    "ml_results": {}
+  },
+  {
+    "id": "074b9036-e370-4cc0-aa31-abec52117995",
+    "created_at": "2026-04-18T09:29:46.676260+00:00",
+    "fingerprint": "0f2a19b0df1ed0e026feb50cbb7a76863c4ac22e0ffc4875a9aeb9cbbe681b7e",
+    "dataset_name": "Superstore.csv",
+    "action": "clean",
+    "source": "file_upload",
+    "target_column": null,
+    "created_by": {
+      "username": "data_analyst",
+      "role": "analyst"
+    },
+    "summary": {
+      "action": "clean",
+      "dataset_name": "Superstore.csv",
+      "rows": 9994,
+      "cols": 21,
+      "domain": "Unknown",
+      "target_column": null,
+      "source": "file_upload",
+      "owner": "data_analyst"
+    },
+    "analysis": {
+      "category": "Retail",
+      "rows": 9994,
+      "cols": 21,
+      "column_info": [
+        "row_id",
+        "order_id",
+        "order_date",
+        "ship_date",
+        "ship_mode",
+        "customer_id",
+        "customer_name",
+        "segment",
+        "country",
+        "city",
+        "state",
+        "postal_code",
+        "region",
+        "product_id",
+        "category",
+        "sub-category",
+        "product_name",
+        "sales",
+        "quantity",
+        "discount",
+        "profit"
+      ],
+      "null_counts": [
+        {
+          "row_id": 0,
+          "order_id": 0,
+          "order_date": 0,
+          "ship_date": 0,
+          "ship_mode": 0,
+          "customer_id": 0,
+          "customer_name": 0,
+          "segment": 0,
+          "country": 0,
+          "city": 0,
+          "state": 0,
+          "postal_code": 0,
+          "region": 0,
+          "product_id": 0,
+          "category": 0,
+          "sub-category": 0,
+          "product_name": 0,
+          "sales": 0,
+          "quantity": 0,
+          "discount": 0,
+          "profit": 0
+        }
+      ],
+      "audit_errors": [],
+      "domain_info": {
+        "domain": "Unknown",
+        "confidence": 0,
+        "columns": [],
+        "error": "OpenAI package is not installed."
+      }
+    },
+    "cleaning_stats": [
+      {
+        "columnName": "Row ID",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Order ID",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Order Date",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Ship Date",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Ship Mode",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Customer ID",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Customer Name",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Segment",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Country",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "City",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "State",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Postal Code",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Region",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Product ID",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Category",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Sub-Category",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Product Name",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Sales",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Quantity",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Discount",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Profit",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "row_id",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "order_id",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "order_date",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "ship_date",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "ship_mode",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "customer_id",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "customer_name",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "segment",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "country",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "city",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "state",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "postal_code",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "region",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "product_id",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "category",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "sub-category",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "product_name",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "sales",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "quantity",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "discount",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "profit",
+        "missingBefore": 0,
+        "missingAfter": 0
+      }
+    ],
+    "ml_results": {}
+  },
+  {
+    "id": "d5d367f9-7f91-4386-937a-3e32def3995f",
+    "created_at": "2026-04-18T09:31:35.316340+00:00",
+    "fingerprint": "54075e8441d82a926b527167ade87ebfc195aebf959e6a5244ca58c2b334622d",
+    "dataset_name": null,
+    "action": "question",
+    "source": "question_answering",
+    "target_column": null,
+    "created_by": {
+      "username": "data_analyst",
+      "role": "analyst"
+    },
+    "summary": {
+      "action": "question",
+      "dataset_name": null,
+      "rows": 9994,
+      "cols": 21,
+      "domain": null,
+      "target_column": null,
+      "source": "question_answering",
+      "owner": "data_analyst"
+    },
+    "analysis": {
+      "rows": 9994,
+      "cols": 21,
+      "question": "hamari profit kitni hai?",
+      "intent": "compare"
+    },
+    "cleaning_stats": [],
+    "ml_results": {}
+  },
+  {
+    "id": "8c513f17-1a8b-4fc5-9af6-3568691c1fb7",
+    "created_at": "2026-04-18T09:31:51.872044+00:00",
+    "fingerprint": "45569f02de55ad0baaa51e6f2c7d2738c8868de532a036eda4e9e1703398e50f",
+    "dataset_name": null,
+    "action": "forecast",
+    "source": "forecasting",
+    "target_column": null,
+    "created_by": {
+      "username": "data_analyst",
+      "role": "analyst"
+    },
+    "summary": {
+      "action": "forecast",
+      "dataset_name": null,
+      "rows": 9994,
+      "cols": 21,
+      "domain": null,
+      "target_column": null,
+      "source": "forecasting",
+      "owner": "data_analyst"
+    },
+    "analysis": {
+      "rows": 9994,
+      "cols": 21,
+      "metric_column": null,
+      "date_column": null
+    },
+    "cleaning_stats": [],
+    "ml_results": {}
+  },
+  {
+    "id": "7431fd72-38c8-486f-aa2d-9a292e9ff55d",
+    "created_at": "2026-04-18T09:31:54.827784+00:00",
+    "fingerprint": "2f7d9fb29ed8a7b6fa05e7a2f3b3c0fe77ed2d7007d5246cd55f33cc1cf278d7",
+    "dataset_name": null,
+    "action": "compare",
+    "source": "version_comparison",
+    "target_column": null,
+    "created_by": {
+      "username": "data_analyst",
+      "role": "analyst"
+    },
+    "summary": {
+      "action": "compare",
+      "dataset_name": null,
+      "rows": 9994,
+      "cols": 21,
+      "domain": null,
+      "target_column": null,
+      "source": "version_comparison",
+      "owner": "data_analyst"
+    },
+    "analysis": {
+      "rows": 9994,
+      "cols": 21,
+      "before_rows": 9994
+    },
+    "cleaning_stats": [],
+    "ml_results": {}
+  },
+  {
+    "id": "25fcab37-e7e2-46b9-9448-900c60625fd7",
+    "created_at": "2026-04-18T09:34:19.202422+00:00",
+    "fingerprint": "571408e1e806798796034b4d8493b9e9fd2315bcedac52bbf8d3f1bbfca24780",
+    "dataset_name": "Smoke Workflow",
+    "action": "workflow",
+    "source": "workflow_builder",
+    "target_column": null,
+    "created_by": {
+      "username": "data_analyst",
+      "role": "analyst"
+    },
+    "summary": {
+      "action": "workflow",
+      "dataset_name": "Smoke Workflow",
+      "rows": 9994,
+      "cols": 21,
+      "domain": "Unknown",
+      "target_column": null,
+      "source": "workflow_builder",
+      "owner": "data_analyst"
+    },
+    "analysis": {
+      "category": "Retail",
+      "rows": 9994,
+      "cols": 21,
+      "column_info": [
+        "row_id",
+        "order_id",
+        "order_date",
+        "ship_date",
+        "ship_mode",
+        "customer_id",
+        "customer_name",
+        "segment",
+        "country",
+        "city",
+        "state",
+        "postal_code",
+        "region",
+        "product_id",
+        "category",
+        "sub-category",
+        "product_name",
+        "sales",
+        "quantity",
+        "discount",
+        "profit"
+      ],
+      "null_counts": [
+        {
+          "row_id": 0,
+          "order_id": 0,
+          "order_date": 0,
+          "ship_date": 0,
+          "ship_mode": 0,
+          "customer_id": 0,
+          "customer_name": 0,
+          "segment": 0,
+          "country": 0,
+          "city": 0,
+          "state": 0,
+          "postal_code": 0,
+          "region": 0,
+          "product_id": 0,
+          "category": 0,
+          "sub-category": 0,
+          "product_name": 0,
+          "sales": 0,
+          "quantity": 0,
+          "discount": 0,
+          "profit": 0
+        }
+      ],
+      "audit_errors": [],
+      "domain_info": {
+        "domain": "Unknown",
+        "confidence": 0,
+        "columns": [],
+        "error": "OpenAI package is not installed."
+      }
+    },
+    "cleaning_stats": [
+      {
+        "columnName": "row_id",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "order_id",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "order_date",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "ship_date",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "ship_mode",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "customer_id",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "customer_name",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "segment",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "country",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "city",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "state",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "postal_code",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "region",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "product_id",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "category",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "sub-category",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "product_name",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "sales",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "quantity",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "discount",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "profit",
+        "missingBefore": 0,
+        "missingAfter": 0
+      }
+    ],
+    "ml_results": {}
+  },
+  {
+    "id": "eeebfdb0-3379-438a-9b4b-3d4e52635364",
+    "created_at": "2026-04-18T09:34:28.491650+00:00",
+    "fingerprint": "ba22ac7c12ecc09ee2b5cf4f354108331c59526b4f490dc22f996d3ac34ee147",
+    "dataset_name": "Superstore.csv",
+    "action": "arrange",
+    "source": "file_upload",
+    "target_column": null,
+    "created_by": {
+      "username": "data_analyst",
+      "role": "analyst"
+    },
+    "summary": {
+      "action": "arrange",
+      "dataset_name": "Superstore.csv",
+      "rows": 9994,
+      "cols": 21,
+      "domain": "Unknown",
+      "target_column": null,
+      "source": "file_upload",
+      "owner": "data_analyst"
+    },
+    "analysis": {
+      "category": "Retail",
+      "rows": 9994,
+      "cols": 21,
+      "column_info": [
+        "Product ID",
+        "Category",
+        "Product Name",
+        "City",
+        "Country",
+        "Customer ID",
+        "Customer Name",
+        "Discount",
+        "Order Date",
+        "Order ID",
+        "Postal Code",
+        "Profit",
+        "Quantity",
+        "Region",
+        "Row ID",
+        "Sales",
+        "Segment",
+        "Ship Date",
+        "Ship Mode",
+        "State",
+        "Sub-Category"
+      ],
+      "null_counts": [
+        {
+          "Product ID": 0,
+          "Category": 0,
+          "Product Name": 0,
+          "City": 0,
+          "Country": 0,
+          "Customer ID": 0,
+          "Customer Name": 0,
+          "Discount": 0,
+          "Order Date": 0,
+          "Order ID": 0,
+          "Postal Code": 0,
+          "Profit": 0,
+          "Quantity": 0,
+          "Region": 0,
+          "Row ID": 0,
+          "Sales": 0,
+          "Segment": 0,
+          "Ship Date": 0,
+          "Ship Mode": 0,
+          "State": 0,
+          "Sub-Category": 0
+        }
+      ],
+      "audit_errors": [],
+      "domain_info": {
+        "domain": "Unknown",
+        "confidence": 0,
+        "columns": [],
+        "error": "OpenAI package is not installed."
+      }
+    },
+    "cleaning_stats": [
+      {
+        "columnName": "Row ID",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Order ID",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Order Date",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Ship Date",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Ship Mode",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Customer ID",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Customer Name",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Segment",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Country",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "City",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "State",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Postal Code",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Region",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Product ID",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Category",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Sub-Category",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Product Name",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Sales",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Quantity",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Discount",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Profit",
+        "missingBefore": 0,
+        "missingAfter": 0
+      }
+    ],
+    "ml_results": {}
+  },
+  {
+    "id": "3aa1112b-4dca-48ab-b72c-ab1eaadfd81a",
+    "created_at": "2026-04-18T09:46:24.744968+00:00",
+    "fingerprint": "e996b489ff21f0b0c0aec8c2d10ad6ae2102ecc6ef5428087cb7671c27b3faf5",
+    "dataset_name": "Superstore.csv",
+    "action": "clean",
+    "source": "file_upload",
+    "target_column": null,
+    "created_by": {
+      "username": "data_analyst",
+      "role": "analyst"
+    },
+    "summary": {
+      "action": "clean",
+      "dataset_name": "Superstore.csv",
+      "rows": 9994,
+      "cols": 21,
+      "domain": "Unknown",
+      "target_column": null,
+      "source": "file_upload",
+      "owner": "data_analyst"
+    },
+    "analysis": {
+      "category": "Retail",
+      "rows": 9994,
+      "cols": 21,
+      "column_info": [
+        "row_id",
+        "order_id",
+        "order_date",
+        "ship_date",
+        "ship_mode",
+        "customer_id",
+        "customer_name",
+        "segment",
+        "country",
+        "city",
+        "state",
+        "postal_code",
+        "region",
+        "product_id",
+        "category",
+        "sub-category",
+        "product_name",
+        "sales",
+        "quantity",
+        "discount",
+        "profit"
+      ],
+      "null_counts": [
+        {
+          "row_id": 0,
+          "order_id": 0,
+          "order_date": 0,
+          "ship_date": 0,
+          "ship_mode": 0,
+          "customer_id": 0,
+          "customer_name": 0,
+          "segment": 0,
+          "country": 0,
+          "city": 0,
+          "state": 0,
+          "postal_code": 0,
+          "region": 0,
+          "product_id": 0,
+          "category": 0,
+          "sub-category": 0,
+          "product_name": 0,
+          "sales": 0,
+          "quantity": 0,
+          "discount": 0,
+          "profit": 0
+        }
+      ],
+      "audit_errors": [],
+      "domain_info": {
+        "domain": "Unknown",
+        "confidence": 0,
+        "columns": [],
+        "error": "OpenAI package is not installed."
+      }
+    },
+    "cleaning_stats": [
+      {
+        "columnName": "Row ID",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Order ID",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Order Date",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Ship Date",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Ship Mode",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Customer ID",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Customer Name",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Segment",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Country",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "City",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "State",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Postal Code",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Region",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Product ID",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Category",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Sub-Category",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Product Name",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Sales",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Quantity",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Discount",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "Profit",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "row_id",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "order_id",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "order_date",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "ship_date",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "ship_mode",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "customer_id",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "customer_name",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "segment",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "country",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "city",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "state",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "postal_code",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "region",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "product_id",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "category",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "sub-category",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "product_name",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "sales",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "quantity",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "discount",
+        "missingBefore": 0,
+        "missingAfter": 0
+      },
+      {
+        "columnName": "profit",
+        "missingBefore": 0,
+        "missingAfter": 0
+      }
+    ],
+    "ml_results": {}
+  },
+  {
+    "id": "427e8db8-74ba-4e99-8fa3-2a10f95eaf80",
+    "created_at": "2026-04-18T10:12:24.422007+00:00",
+    "fingerprint": "00a9ee3cb3eb9af6120f8f972aecc5c5e2ba13d6069925de172280d63a1aaea2",
+    "dataset_name": "Superstore.csv",
+    "action": "upload",
+    "source": "file_upload",
+    "target_column": null,
+    "created_by": {
+      "username": "data_analyst",
+      "role": "analyst"
+    },
+    "summary": {
+      "action": "upload",
+      "dataset_name": "Superstore.csv",
+      "rows": 9994,
+      "cols": 21,
+      "domain": "Unknown",
+      "target_column": null,
+      "source": "file_upload",
+      "owner": "data_analyst"
+    },
+    "analysis": {
+      "category": "Retail",
+      "rows": 9994,
+      "cols": 21,
+      "column_info": [
+        "Row ID",
+        "Order ID",
+        "Order Date",
+        "Ship Date",
+        "Ship Mode",
+        "Customer ID",
+        "Customer Name",
+        "Segment",
+        "Country",
+        "City",
+        "State",
+        "Postal Code",
+        "Region",
+        "Product ID",
+        "Category",
+        "Sub-Category",
+        "Product Name",
+        "Sales",
+        "Quantity",
+        "Discount",
+        "Profit"
+      ],
+      "null_counts": [
+        {
+          "Row ID": 0,
+          "Order ID": 0,
+          "Order Date": 0,
+          "Ship Date": 0,
+          "Ship Mode": 0,
+          "Customer ID": 0,
+          "Customer Name": 0,
+          "Segment": 0,
+          "Country": 0,
+          "City": 0,
+          "State": 0,
+          "Postal Code": 0,
+          "Region": 0,
+          "Product ID": 0,
+          "Category": 0,
+          "Sub-Category": 0,
+          "Product Name": 0,
+          "Sales": 0,
+          "Quantity": 0,
+          "Discount": 0,
+          "Profit": 0
+        }
+      ],
+      "audit_errors": [],
+      "domain_info": {
+        "domain": "Unknown",
+        "confidence": 0,
+        "columns": [],
+        "error": "OPENAI_API_KEY is not configured."
+      }
+    },
+    "cleaning_stats": [],
+    "ml_results": {}
+  }
+]
