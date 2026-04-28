@@ -269,8 +269,18 @@ def decode_access_token(token: str) -> dict[str, Any]:
 async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends()) -> dict[str, Any]:
     username = _validate_username(form_data.username)
     client_key = _get_client_id(request, username)
+    client_ip = request.client.host if request.client else "unknown"
+    
     attempts = _prune_attempts(_LOGIN_ATTEMPTS, client_key, LOGIN_WINDOW_MINUTES)
     if len(attempts) >= MAX_LOGIN_ATTEMPTS:
+        db.log_audit_event(
+            DB_path,
+            event_type="login_attempt",
+            status="failed",
+            username=username,
+            client_ip=client_ip,
+            message="Rate limit exceeded",
+        )
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail=f"Too many login attempts. Try again in {LOGIN_WINDOW_MINUTES} minutes",
@@ -279,6 +289,14 @@ async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends
     user = db.get_user(DB_path, username)
     if not user or not verify_password(form_data.password, user["password_hash"]):
         _record_attempt(_LOGIN_ATTEMPTS, client_key)
+        db.log_audit_event(
+            DB_path,
+            event_type="login_attempt",
+            status="failed",
+            username=username,
+            client_ip=client_ip,
+            message="Invalid credentials",
+        )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
@@ -289,6 +307,17 @@ async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends
 
     _LOGIN_ATTEMPTS.pop(client_key, None)
     token = create_access_token(username, user["role"])
+    
+    db.log_audit_event(
+        DB_path,
+        event_type="login_success",
+        status="success",
+        username=username,
+        email=user["email"],
+        client_ip=client_ip,
+        message="Login successful",
+    )
+    
     return {
         "access_token": token,
         "token_type": "bearer",
@@ -306,8 +335,18 @@ async def register(payload: RegisterRequest, request: Request) -> dict[str, Any]
     _validate_password_strength(payload.password)
 
     client_key = _get_client_id(request, email)
+    client_ip = request.client.host if request.client else "unknown"
+    
     attempts = _prune_attempts(_REGISTER_ATTEMPTS, client_key, REGISTER_WINDOW_MINUTES)
     if len(attempts) >= MAX_REGISTER_ATTEMPTS:
+        db.log_audit_event(
+            DB_path,
+            event_type="register_attempt",
+            status="failed",
+            email=email,
+            client_ip=client_ip,
+            message="Rate limit exceeded",
+        )
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail=f"Too many registration attempts. Try again in {REGISTER_WINDOW_MINUTES} minutes",
@@ -315,9 +354,28 @@ async def register(payload: RegisterRequest, request: Request) -> dict[str, Any]
 
     if db.get_user(DB_path, username) or _find_username_by_email(email):
         _record_attempt(_REGISTER_ATTEMPTS, client_key)
+        db.log_audit_event(
+            DB_path,
+            event_type="register_attempt",
+            status="failed",
+            username=username,
+            email=email,
+            client_ip=client_ip,
+            message="Account already exists",
+        )
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Account already exists")
 
     db.create_user(DB_path, username, pwd_context.hash(payload.password), role, email, False, datetime.now(timezone.utc))
+
+    db.log_audit_event(
+        DB_path,
+        event_type="register",
+        status="success",
+        username=username,
+        email=email,
+        client_ip=client_ip,
+        message="New account registered, verification email sent",
+    )
 
     _REGISTER_ATTEMPTS.pop(client_key, None)
     verify_token = _mint_token(None, {"username": username, "email": email}, VERIFY_TOKEN_EXPIRE_MINUTES, token_type="verify")
@@ -334,22 +392,60 @@ async def register(payload: RegisterRequest, request: Request) -> dict[str, Any]
 
 @auth_router.get("/verify-email")
 async def verify_email(token: str = Query(..., min_length=16)) -> dict[str, Any]:
-    payload = _consume_token(None, token, token_type="verify")
-    username = payload.get("username")
-    user = db.get_user(DB_path, username)
-    if not user:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Account not found")
+    try:
+        payload = _consume_token(None, token, token_type="verify")
+        username = payload.get("username")
+        email = payload.get("email")
+        user = db.get_user(DB_path, username)
+        if not user:
+            db.log_audit_event(
+                DB_path,
+                event_type="verify_email",
+                status="failed",
+                username=username,
+                email=email,
+                message="Account not found",
+            )
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Account not found")
 
-    db.update_user_verified(DB_path, username, True)
-    return {"message": "Email verified successfully. You can now sign in."}
+        db.update_user_verified(DB_path, username, True)
+        
+        db.log_audit_event(
+            DB_path,
+            event_type="verify_email",
+            status="success",
+            username=username,
+            email=email,
+            message="Email verified",
+        )
+        
+        return {"message": "Email verified successfully. You can now sign in."}
+    except KeyError as e:
+        db.log_audit_event(
+            DB_path,
+            event_type="verify_email",
+            status="failed",
+            message=f"Invalid token: {str(e)}",
+        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired token")
 
 
 @auth_router.post("/resend-verification")
 async def resend_verification(payload: ResendVerificationRequest, request: Request) -> dict[str, Any]:
     email = _validate_email(payload.email)
     client_key = _get_client_id(request, email)
+    client_ip = request.client.host if request.client else "unknown"
+    
     attempts = _prune_attempts(_REGISTER_ATTEMPTS, client_key, REGISTER_WINDOW_MINUTES)
     if len(attempts) >= MAX_REGISTER_ATTEMPTS:
+        db.log_audit_event(
+            DB_path,
+            event_type="resend_verification",
+            status="failed",
+            email=email,
+            client_ip=client_ip,
+            message="Rate limit exceeded",
+        )
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail=f"Too many requests. Try again in {REGISTER_WINDOW_MINUTES} minutes",
@@ -357,14 +453,41 @@ async def resend_verification(payload: ResendVerificationRequest, request: Reque
 
     username = _find_username_by_email(email)
     if not username:
+        db.log_audit_event(
+            DB_path,
+            event_type="resend_verification",
+            status="failed",
+            email=email,
+            client_ip=client_ip,
+            message="Account not found",
+        )
         return {"message": "If the email exists, a verification link has been sent."}
 
     user = db.get_user(DB_path, username) or {}
     if user.get("verified", False):
+        db.log_audit_event(
+            DB_path,
+            event_type="resend_verification",
+            status="failed",
+            username=username,
+            email=email,
+            client_ip=client_ip,
+            message="Email already verified",
+        )
         return {"message": "Email is already verified."}
 
     verify_token = _mint_token(None, {"username": username, "email": email}, VERIFY_TOKEN_EXPIRE_MINUTES, token_type="verify")
     _send_verification_email(username, email, verify_token)
+
+    db.log_audit_event(
+        DB_path,
+        event_type="resend_verification",
+        status="success",
+        username=username,
+        email=email,
+        client_ip=client_ip,
+        message="Verification email sent",
+    )
 
     response: dict[str, Any] = {"message": "Verification email sent."}
     if not IS_PRODUCTION:
@@ -376,8 +499,18 @@ async def resend_verification(payload: ResendVerificationRequest, request: Reque
 async def request_password_reset(payload: PasswordResetRequest, request: Request) -> dict[str, Any]:
     email = _validate_email(payload.email)
     client_key = _get_client_id(request, email)
+    client_ip = request.client.host if request.client else "unknown"
+    
     attempts = _prune_attempts(_RESET_ATTEMPTS, client_key, RESET_WINDOW_MINUTES)
     if len(attempts) >= MAX_RESET_ATTEMPTS:
+        db.log_audit_event(
+            DB_path,
+            event_type="password_reset_request",
+            status="failed",
+            email=email,
+            client_ip=client_ip,
+            message="Rate limit exceeded",
+        )
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail=f"Too many password reset attempts. Try again in {RESET_WINDOW_MINUTES} minutes",
@@ -386,14 +519,41 @@ async def request_password_reset(payload: PasswordResetRequest, request: Request
     _record_attempt(_RESET_ATTEMPTS, client_key)
     username = _find_username_by_email(email)
     if not username:
+        db.log_audit_event(
+            DB_path,
+            event_type="password_reset_request",
+            status="failed",
+            email=email,
+            client_ip=client_ip,
+            message="Account not found",
+        )
         return {"message": "If an account exists, a password reset link has been sent."}
 
     user = db.get_user(DB_path, username) or {}
     if not user.get("verified", False):
+        db.log_audit_event(
+            DB_path,
+            event_type="password_reset_request",
+            status="failed",
+            username=username,
+            email=email,
+            client_ip=client_ip,
+            message="Email not verified",
+        )
         return {"message": "If an account exists, a password reset link has been sent."}
 
     reset_token = _mint_token(None, {"username": username, "email": email}, RESET_TOKEN_EXPIRE_MINUTES, token_type="reset")
     _send_password_reset_email(username, email, reset_token)
+
+    db.log_audit_event(
+        DB_path,
+        event_type="password_reset_request",
+        status="success",
+        username=username,
+        email=email,
+        client_ip=client_ip,
+        message="Reset link sent",
+    )
 
     response: dict[str, Any] = {"message": "If an account exists, a password reset link has been sent."}
     if not IS_PRODUCTION:
@@ -404,14 +564,42 @@ async def request_password_reset(payload: PasswordResetRequest, request: Request
 @auth_router.post("/password-reset/confirm")
 async def confirm_password_reset(payload: PasswordResetConfirmRequest) -> dict[str, Any]:
     _validate_password_strength(payload.new_password)
-    token_payload = _consume_token(None, payload.token, token_type="reset")
-    username = token_payload.get("username")
-    user = db.get_user(DB_path, username)
-    if not user:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Account not found")
+    try:
+        token_payload = _consume_token(None, payload.token, token_type="reset")
+        username = token_payload.get("username")
+        email = token_payload.get("email")
+        user = db.get_user(DB_path, username)
+        if not user:
+            db.log_audit_event(
+                DB_path,
+                event_type="password_reset_confirm",
+                status="failed",
+                username=username,
+                email=email,
+                message="Account not found",
+            )
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Account not found")
 
-    db.update_user_password(DB_path, username, pwd_context.hash(payload.new_password))
-    return {"message": "Password reset successful. You can now sign in."}
+        db.update_user_password(DB_path, username, pwd_context.hash(payload.new_password))
+        
+        db.log_audit_event(
+            DB_path,
+            event_type="password_reset_confirm",
+            status="success",
+            username=username,
+            email=email,
+            message="Password reset successfully",
+        )
+        
+        return {"message": "Password reset successful. You can now sign in."}
+    except KeyError as e:
+        db.log_audit_event(
+            DB_path,
+            event_type="password_reset_confirm",
+            status="failed",
+            message=f"Invalid token: {str(e)}",
+        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired token")
 
 
 def get_current_user(token: str = Depends(oauth2_scheme)) -> dict[str, Any]:
@@ -426,6 +614,24 @@ def get_current_user(token: str = Depends(oauth2_scheme)) -> dict[str, Any]:
 @auth_router.get("/me")
 async def get_me(current_user: dict[str, Any] = Depends(get_current_user)) -> dict[str, Any]:
     return current_user
+
+
+@auth_router.get("/audit-log")
+async def get_audit_log(
+    current_user: dict[str, Any] = Depends(require_role(["admin"])),
+    limit: int = Query(100, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+) -> dict[str, Any]:
+    """Retrieve audit logs (admin only)."""
+    logs = db.get_audit_logs(DB_path, limit=limit, offset=offset)
+    db.log_audit_event(
+        DB_path,
+        event_type="audit_log_access",
+        status="success",
+        username=current_user["username"],
+        message=f"Retrieved {len(logs)} audit logs",
+    )
+    return {"logs": logs, "count": len(logs), "limit": limit, "offset": offset}
 
 
 def require_role(allowed_roles: list[str]):

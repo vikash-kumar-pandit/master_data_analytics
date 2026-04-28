@@ -1998,6 +1998,46 @@ p {
   gap: 24px;
   padding: 16px;
   background: rgba(14, 165, 233, 0.08);
+}
+
+/* Audit Log Styles */
+.audit-log-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+  background: var(--surface-base);
+  border-radius: var(--radius-lg);
+}
+
+.audit-log-container h2 {
+  color: var(--text-main);
+  margin-bottom: 8px;
+  font-size: 1.8rem;
+}
+
+.audit-log-container > p {
+  margin-bottom: 20px;
+}
+
+.badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.badge-success {
+  background-color: rgba(22, 163, 74, 0.1);
+  color: #16a34a;
+}
+
+.badge-failed {
+  background-color: rgba(220, 38, 38, 0.1);
+  color: #dc2626;
+}
   border-radius: var(--radius-md);
 }
 

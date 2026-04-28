@@ -26,6 +26,18 @@ DB_SCHEMA = {
         "expires_at TEXT NOT NULL"
         ")"
     ),
+    "audit_log": (
+        "CREATE TABLE IF NOT EXISTS audit_log ("
+        "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+        "event_type TEXT NOT NULL,"
+        "username TEXT,"
+        "email TEXT,"
+        "client_ip TEXT,"
+        "status TEXT NOT NULL,"
+        "message TEXT,"
+        "timestamp TEXT NOT NULL"
+        ")"
+    ),
 }
 
 
@@ -141,3 +153,91 @@ def consume_token(db_path: str, raw_token: str, token_type: str) -> dict[str, An
     conn.commit()
     conn.close()
     return {"username": row["username"], "email": row["email"]}
+
+
+def log_audit_event(
+    db_path: str,
+    event_type: str,
+    status: str,
+    username: str | None = None,
+    email: str | None = None,
+    client_ip: str | None = None,
+    message: str | None = None,
+):
+    """Log an audit event to the audit_log table."""
+    try:
+        conn = _connect(db_path)
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO audit_log (event_type, username, email, client_ip, status, message, timestamp) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (
+                event_type,
+                username,
+                email,
+                client_ip,
+                status,
+                message,
+                datetime.now(timezone.utc).isoformat(),
+            ),
+        )
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        # Log errors to console but don't fail the operation
+        import logging
+        logging.getLogger("audit").error("Failed to log audit event: %s", e)
+
+
+def get_audit_logs(db_path: str, limit: int = 100, offset: int = 0) -> list[dict[str, Any]]:
+    """Retrieve audit logs, most recent first."""
+    conn = _connect(db_path)
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT id, event_type, username, email, client_ip, status, message, timestamp "
+        "FROM audit_log ORDER BY id DESC LIMIT ? OFFSET ?",
+        (limit, offset),
+    )
+    rows = cur.fetchall()
+    conn.close()
+    
+    return [
+        {
+            "id": row["id"],
+            "event_type": row["event_type"],
+            "username": row["username"],
+            "email": row["email"],
+            "client_ip": row["client_ip"],
+            "status": row["status"],
+            "message": row["message"],
+            "timestamp": row["timestamp"],
+        }
+        for row in rows
+    ]
+
+
+def get_audit_logs_for_user(db_path: str, username: str, limit: int = 50) -> list[dict[str, Any]]:
+    """Retrieve audit logs for a specific user."""
+    conn = _connect(db_path)
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT id, event_type, username, email, client_ip, status, message, timestamp "
+        "FROM audit_log WHERE username = ? ORDER BY id DESC LIMIT ?",
+        (username, limit),
+    )
+    rows = cur.fetchall()
+    conn.close()
+    
+    return [
+        {
+            "id": row["id"],
+            "event_type": row["event_type"],
+            "username": row["username"],
+            "email": row["email"],
+            "client_ip": row["client_ip"],
+            "status": row["status"],
+            "message": row["message"],
+            "timestamp": row["timestamp"],
+        }
+        for row in rows
+    ]

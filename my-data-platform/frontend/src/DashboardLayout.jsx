@@ -9,6 +9,7 @@ import AnalyticsWorkbench from './components/AnalyticsWorkbench';
 import GraphGallery from './components/GraphGallery';
 import SearchAndExport from './components/SearchAndExport';
 import DataQualityDashboard from './components/DataQualityDashboard';
+import AdminAuditLog from './AdminAuditLog';
 import { useAuth } from './context/AuthContext';
 import { API_BASE_URL } from './config';
 
@@ -238,7 +239,9 @@ export default function DashboardLayout() {
           ? 'Ask & Report'
         : activeTab === 'predict'
           ? 'AI Predictions'
-          : 'Workflow Builder';
+          : activeTab === 'audit-log'
+            ? 'Audit Log'
+            : 'Workflow Builder';
 
   const activeSubtitle =
     activeTab === 'overview'
@@ -251,7 +254,9 @@ export default function DashboardLayout() {
           ? 'Ask natural-language questions, forecast outcomes, compare versions, and export reports.'
         : activeTab === 'predict'
           ? 'Run AutoML, generate explainability, and produce a business-friendly data narrative.'
-          : 'Compose reusable no-code pipelines for profile, clean, model, and explain workflows.';
+          : activeTab === 'audit-log'
+            ? 'Track all authentication and authorization events for compliance and security.'
+            : 'Compose reusable no-code pipelines for profile, clean, model, and explain workflows.';
 
   const activityCards = useMemo(() => {
     const currentUser = activitySummary?.current_user || {};
@@ -880,6 +885,19 @@ export default function DashboardLayout() {
               </span>
             </button>
           ) : null}
+
+          {user?.role === 'admin' ? (
+            <button
+              type="button"
+              className={activeTab === 'audit-log' ? 'sidebar-btn active' : 'sidebar-btn'}
+              onClick={() => setActiveTab('audit-log')}
+            >
+              <span className="nav-item-content">
+                <span className="nav-icon">AL</span>
+                Audit Log
+              </span>
+            </button>
+          ) : null}
         </div>
 
         <div className="sidebar-controls">
@@ -1295,6 +1313,10 @@ export default function DashboardLayout() {
                 }}
               />
             </div>
+          ) : null}
+
+          {activeTab === 'audit-log' && user?.role === 'admin' ? (
+            <AdminAuditLog />
           ) : null}
         </div>
       </section>
