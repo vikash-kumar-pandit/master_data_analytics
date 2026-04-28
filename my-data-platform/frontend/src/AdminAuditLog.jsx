@@ -5,7 +5,7 @@ import { API_BASE_URL } from './config';
 import './styles.css';
 
 export default function AdminAuditLog() {
-  const { user, getAuthHeaders } = useAuth();
+  const { user } = useAuth();
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -15,15 +15,15 @@ export default function AdminAuditLog() {
   const [searchTerm, setSearchTerm] = useState('');
 
   const fetchAuditLogs = async () => {
+    if (!API_BASE_URL) {
+      setError('Backend API not configured. Please set VITE_API_BASE_URL.');
+      return;
+    }
+
     setLoading(true);
     setError('');
     try {
-      const response = await axios.get(
-        `${API_BASE_URL}/api/auth/audit-log?limit=${limit}&offset=${offset}`,
-        {
-          headers: getAuthHeaders(),
-        }
-      );
+      const response = await axios.get(`${API_BASE_URL}/api/auth/audit-log?limit=${limit}&offset=${offset}`);
       setLogs(response.data.logs || []);
     } catch (err) {
       setError(err.response?.data?.detail || 'Failed to fetch audit logs');
