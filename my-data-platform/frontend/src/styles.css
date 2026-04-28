@@ -2298,7 +2298,7 @@ p {
 
 .demo-role-row {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
 }
 
@@ -2310,6 +2310,16 @@ p {
 .demo-role-row button.active {
   background: linear-gradient(135deg, #0ea5e9 0%, #14b8a6 100%);
   box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.25);
+}
+
+.success {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: rgba(22, 163, 74, 0.12);
+  color: #166534;
+  font-weight: 700;
+  font-size: 0.86rem;
 }
 
 .login-submit {

@@ -92,22 +92,46 @@ export function AuthProvider({ children }) {
   };
 
   const register = async (username, password, role = 'viewer') => {
+    throw new Error('Use registerWithEmail instead.');
+  };
+
+  const registerWithEmail = async (username, email, password, role = 'viewer') => {
     const response = await axios.post(`${API_BASE_URL}/api/auth/register`, {
       username,
+      email,
       password,
       role,
     });
+    return response.data;
+  };
 
-    const userData = {
-      username: response.data.username || username,
-      role: response.data.role,
-      token: response.data.access_token,
-      expiresAt: Date.now() + (response.data.expires_in || 7200) * 1000,
-    };
+  const verifyEmail = async (token) => {
+    const response = await axios.get(`${API_BASE_URL}/api/auth/verify-email`, {
+      params: { token },
+    });
+    return response.data;
+  };
 
-    applyAuthHeader(userData.token);
-    setUser(userData);
-    return userData;
+  const resendVerification = async (email) => {
+    const response = await axios.post(`${API_BASE_URL}/api/auth/resend-verification`, {
+      email,
+    });
+    return response.data;
+  };
+
+  const requestPasswordReset = async (email) => {
+    const response = await axios.post(`${API_BASE_URL}/api/auth/password-reset/request`, {
+      email,
+    });
+    return response.data;
+  };
+
+  const confirmPasswordReset = async (token, newPassword) => {
+    const response = await axios.post(`${API_BASE_URL}/api/auth/password-reset/confirm`, {
+      token,
+      new_password: newPassword,
+    });
+    return response.data;
   };
 
   const logout = () => {
@@ -120,6 +144,11 @@ export function AuthProvider({ children }) {
       user,
       isAuthenticated: Boolean(user?.token),
       login,
+      registerWithEmail,
+      verifyEmail,
+      resendVerification,
+      requestPasswordReset,
+      confirmPasswordReset,
       register,
       logout,
     }),

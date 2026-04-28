@@ -1,15 +1,28 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 
 export default function Login() {
-  const { login, register, isAuthenticated, user } = useAuth();
+  const {
+    login,
+    registerWithEmail,
+    verifyEmail,
+    resendVerification,
+    requestPasswordReset,
+    confirmPasswordReset,
+    isAuthenticated,
+    user,
+  } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [mode, setMode] = useState('login');
   const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [role, setRole] = useState('viewer');
+  const [resetToken, setResetToken] = useState('');
+  const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -19,24 +32,95 @@ export default function Login() {
     }
   }, [isAuthenticated, navigate]);
 
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const verifyToken = params.get('verify_token');
+    const incomingResetToken = params.get('reset_token');
+
+    if (incomingResetToken) {
+      setMode('reset');
+      setResetToken(incomingResetToken);
+      setMessage('Reset token detected. Please set your new password.');
+      return;
+    }
+
+    if (!verifyToken) {
+      return;
+    }
+
+    let cancelled = false;
+    const runVerification = async () => {
+      try {
+        const response = await verifyEmail(verifyToken);
+        if (!cancelled) {
+          setMode('login');
+          setMessage(response?.message || 'Email verified successfully. Please login.');
+        }
+      } catch (verificationError) {
+        if (!cancelled) {
+          setError(verificationError?.response?.data?.detail || 'Email verification failed.');
+        }
+      }
+    };
+
+    runVerification();
+    return () => {
+      cancelled = true;
+    };
+  }, [location.search, verifyEmail]);
+
   const onSubmit = async (event) => {
     event.preventDefault();
     setError('');
+    setMessage('');
     setLoading(true);
 
     try {
       const normalizedUsername = username.trim();
+      const normalizedEmail = email.trim().toLowerCase();
+
       if (mode === 'register') {
         if (password !== confirmPassword) {
           throw new Error('Passwords do not match.');
         }
-        await register(normalizedUsername, password, role);
+        const response = await registerWithEmail(normalizedUsername, normalizedEmail, password, role);
+        setMessage(response?.message || 'Registration complete. Check your email to verify your account.');
+        if (response?.verification_token) {
+          setMessage(
+            `${response?.message || 'Registration complete.'} Dev token: ${response.verification_token}`
+          );
+        }
+        setMode('login');
+      } else if (mode === 'forgot') {
+        const response = await requestPasswordReset(normalizedEmail);
+        setMessage(response?.message || 'If account exists, reset link sent.');
+        if (response?.reset_token) {
+          setMessage(`${response?.message || ''} Dev token: ${response.reset_token}`.trim());
+        }
+      } else if (mode === 'reset') {
+        if (password !== confirmPassword) {
+          throw new Error('Passwords do not match.');
+        }
+        const response = await confirmPasswordReset(resetToken, password);
+        setMessage(response?.message || 'Password reset successful. Please login.');
+        setMode('login');
+        setPassword('');
+        setConfirmPassword('');
+      } else if (mode === 'resend') {
+        const response = await resendVerification(normalizedEmail);
+        setMessage(response?.message || 'Verification email sent.');
+        if (response?.verification_token) {
+          setMessage(`${response?.message || ''} Dev token: ${response.verification_token}`.trim());
+        }
       } else {
         await login(normalizedUsername, password);
+        navigate('/', { replace: true });
       }
-      navigate('/', { replace: true });
     } catch (requestError) {
-      setError(requestError?.response?.data?.detail || (mode === 'login' ? 'Login failed.' : 'Registration failed.'));
+      setError(
+        requestError?.response?.data?.detail ||
+          (mode === 'login' ? 'Login failed.' : 'Authentication request failed.')
+      );
     } finally {
       setLoading(false);
     }
@@ -88,6 +172,12 @@ export default function Login() {
             >
               Register
             </button>
+            <button type="button" onClick={() => setMode('forgot')} className={mode === 'forgot' ? 'active' : ''}>
+              Forgot
+            </button>
+            <button type="button" onClick={() => setMode('resend')} className={mode === 'resend' ? 'active' : ''}>
+              Resend Verify
+            </button>
           </div>
 
           {mode === 'login' ? (
@@ -104,28 +194,51 @@ export default function Login() {
             </div>
           ) : null}
 
-          <label htmlFor="username">Username</label>
-          <input
-            id="username"
-            value={username}
-            onChange={(event) => setUsername(event.target.value)}
-            placeholder="admin_user / data_analyst / guest_viewer"
-            autoComplete="username"
-            required
-          />
+          {mode === 'login' || mode === 'register' ? (
+            <>
+              <label htmlFor="username">Username</label>
+              <input
+                id="username"
+                value={username}
+                onChange={(event) => setUsername(event.target.value)}
+                placeholder="admin_user / data_analyst / guest_viewer"
+                autoComplete="username"
+                required
+              />
+            </>
+          ) : null}
 
-          <label htmlFor="password">Password</label>
-          <input
-            id="password"
-            type="password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            placeholder={mode === 'login' ? 'password123' : 'Use strong password'}
-            autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-            required
-          />
+          {mode === 'register' || mode === 'forgot' || mode === 'resend' ? (
+            <>
+              <label htmlFor="email">Email</label>
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder="name@company.com"
+                autoComplete="email"
+                required
+              />
+            </>
+          ) : null}
 
-          {mode === 'register' ? (
+          {mode === 'login' || mode === 'register' || mode === 'reset' ? (
+            <>
+              <label htmlFor="password">Password</label>
+              <input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                placeholder={mode === 'login' ? 'password123' : 'Use strong password'}
+                autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+                required
+              />
+            </>
+          ) : null}
+
+          {mode === 'register' || mode === 'reset' ? (
             <>
               <label htmlFor="confirmPassword">Confirm Password</label>
               <input
@@ -138,11 +251,15 @@ export default function Login() {
                 required
               />
 
-              <label htmlFor="role">Role</label>
-              <select id="role" value={role} onChange={(event) => setRole(event.target.value)}>
-                <option value="viewer">Viewer</option>
-                <option value="analyst">Analyst</option>
-              </select>
+              {mode === 'register' ? (
+                <>
+                  <label htmlFor="role">Role</label>
+                  <select id="role" value={role} onChange={(event) => setRole(event.target.value)}>
+                    <option value="viewer">Viewer</option>
+                    <option value="analyst">Analyst</option>
+                  </select>
+                </>
+              ) : null}
 
               <small>
                 Password must include uppercase, lowercase, number, special character, and be at least 8 chars.
@@ -150,9 +267,33 @@ export default function Login() {
             </>
           ) : null}
 
+          {mode === 'reset' ? (
+            <>
+              <label htmlFor="resetToken">Reset Token</label>
+              <input
+                id="resetToken"
+                value={resetToken}
+                onChange={(event) => setResetToken(event.target.value)}
+                placeholder="Paste reset token"
+                required
+              />
+            </>
+          ) : null}
+
+          {message ? <p className="success">{message}</p> : null}
           {error ? <p className="error">{error}</p> : null}
           <button type="submit" className="login-submit" disabled={loading}>
-            {loading ? (mode === 'login' ? 'Signing in...' : 'Creating account...') : mode === 'login' ? 'Sign In' : 'Register'}
+            {loading
+              ? 'Processing...'
+              : mode === 'login'
+              ? 'Sign In'
+              : mode === 'register'
+              ? 'Register'
+              : mode === 'forgot'
+              ? 'Send Reset Link'
+              : mode === 'resend'
+              ? 'Resend Verification'
+              : 'Reset Password'}
           </button>
 
           {user?.role ? <small>Current role: {user.role}</small> : null}
