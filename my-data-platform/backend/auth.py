@@ -8,6 +8,7 @@ import secrets
 import smtplib
 from datetime import datetime, timedelta, timezone
 from email.message import EmailMessage
+from . import email_templates
 from typing import Any
 
 import jwt
@@ -191,16 +192,26 @@ def _validate_role(role: str) -> str:
 
 
 def _send_email(to_email: str, subject: str, body: str):
-    if not SMTP_HOST:
+    # body may be a tuple (plain, html) or a single plaintext string
+    if not SMTP_HOST or not SMTP_HOST.strip():
         logger.info("Email provider not configured. Simulated email to %s subject=%s", to_email, subject)
-        logger.info("Email content: %s", body)
+        if isinstance(body, tuple):
+            logger.info("Email plain: %s", body[0])
+            logger.info("Email html: %s", body[1])
+        else:
+            logger.info("Email content: %s", body)
         return
 
     message = EmailMessage()
     message["Subject"] = subject
     message["From"] = SMTP_FROM
     message["To"] = to_email
-    message.set_content(body)
+    if isinstance(body, tuple):
+        plain, html = body
+        message.set_content(plain)
+        message.add_alternative(html, subtype="html")
+    else:
+        message.set_content(body)
 
     with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as smtp:
         smtp.starttls()
@@ -211,24 +222,14 @@ def _send_email(to_email: str, subject: str, body: str):
 
 def _send_verification_email(username: str, email: str, token: str):
     verify_link = f"{APP_BASE_URL}/login?verify_token={token}"
-    body = (
-        f"Hello {username},\n\n"
-        "Welcome to DataSaaS Pro. Please verify your email by clicking this link:\n"
-        f"{verify_link}\n\n"
-        f"This link expires in {VERIFY_TOKEN_EXPIRE_MINUTES} minutes."
-    )
-    _send_email(email, "Verify your DataSaaS account", body)
+    plain, html = email_templates.render_verification_email(username, verify_link, VERIFY_TOKEN_EXPIRE_MINUTES)
+    _send_email(email, "Verify your DataSaaS account", (plain, html))
 
 
 def _send_password_reset_email(username: str, email: str, token: str):
     reset_link = f"{APP_BASE_URL}/login?reset_token={token}"
-    body = (
-        f"Hello {username},\n\n"
-        "A password reset was requested for your account. Use this link to reset your password:\n"
-        f"{reset_link}\n\n"
-        f"This link expires in {RESET_TOKEN_EXPIRE_MINUTES} minutes."
-    )
-    _send_email(email, "Reset your DataSaaS password", body)
+    plain, html = email_templates.render_password_reset_email(username, reset_link, RESET_TOKEN_EXPIRE_MINUTES)
+    _send_email(email, "Reset your DataSaaS password", (plain, html))
 
 
 def verify_password(plain_password: str, password_hash: str) -> bool:
