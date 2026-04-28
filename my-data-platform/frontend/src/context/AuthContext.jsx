@@ -14,6 +14,14 @@ const STORAGE =
 
 const AuthContext = createContext(null);
 
+function requireApiUrl() {
+  if (!API_BASE_URL) {
+    throw new Error(
+      'Backend API not configured. Set VITE_API_BASE_URL environment variable during build or run locally with npm run dev.'
+    );
+  }
+}
+
 function applyAuthHeader(token) {
   if (token) {
     axios.defaults.headers.common.Authorization = `Bearer ${token}`;
@@ -68,6 +76,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   const login = async (username, password) => {
+    requireApiUrl();
     const body = new URLSearchParams();
     body.append('grant_type', 'password');
     body.append('username', username);
@@ -96,6 +105,7 @@ export function AuthProvider({ children }) {
   };
 
   const registerWithEmail = async (username, email, password, role = 'viewer') => {
+    requireApiUrl();
     const response = await axios.post(`${API_BASE_URL}/api/auth/register`, {
       username,
       email,
@@ -106,6 +116,7 @@ export function AuthProvider({ children }) {
   };
 
   const verifyEmail = async (token) => {
+    requireApiUrl();
     const response = await axios.get(`${API_BASE_URL}/api/auth/verify-email`, {
       params: { token },
     });
@@ -113,6 +124,7 @@ export function AuthProvider({ children }) {
   };
 
   const resendVerification = async (email) => {
+    requireApiUrl();
     const response = await axios.post(`${API_BASE_URL}/api/auth/resend-verification`, {
       email,
     });
@@ -120,6 +132,7 @@ export function AuthProvider({ children }) {
   };
 
   const requestPasswordReset = async (email) => {
+    requireApiUrl();
     const response = await axios.post(`${API_BASE_URL}/api/auth/password-reset/request`, {
       email,
     });
@@ -127,6 +140,7 @@ export function AuthProvider({ children }) {
   };
 
   const confirmPasswordReset = async (token, newPassword) => {
+    requireApiUrl();
     const response = await axios.post(`${API_BASE_URL}/api/auth/password-reset/confirm`, {
       token,
       new_password: newPassword,
