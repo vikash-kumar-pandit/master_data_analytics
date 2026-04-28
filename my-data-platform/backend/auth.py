@@ -15,6 +15,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from passlib.context import CryptContext
 from pydantic import BaseModel, Field
+import pathlib
+from . import db
 
 
 SECRET_KEY = os.getenv("JWT_SECRET_KEY", "change-this-in-production-please-use-a-strong-32plus-char-secret")
@@ -60,22 +62,26 @@ _SEED_USERS = {
     },
 }
 
-USERS_DB = {
-    username: {
-        "password_hash": pwd_context.hash(user["password"]),
-        "role": user["role"],
-        "email": user["email"],
-        "verified": user.get("verified", False),
-        "created_at": datetime.now(timezone.utc),
-    }
-    for username, user in _SEED_USERS.items()
-}
+# DB-backed storage. File path may be overridden with AUTH_DB_PATH env var.
+DB_PATH = os.getenv("AUTH_DB_PATH", str(pathlib.Path(__file__).parent / "auth.sqlite3"))
+db.init_db(DB_path := DB_PATH)
+
+# Seed demo users if they do not exist yet
+for username, user in _SEED_USERS.items():
+    if not db.get_user(DB_path, username):
+        db.create_user(
+            DB_path,
+            username,
+            pwd_context.hash(user["password"]),
+            user["role"],
+            user["email"],
+            user.get("verified", False),
+            datetime.now(timezone.utc),
+        )
 
 _LOGIN_ATTEMPTS: dict[str, list[datetime]] = {}
 _REGISTER_ATTEMPTS: dict[str, list[datetime]] = {}
 _RESET_ATTEMPTS: dict[str, list[datetime]] = {}
-_VERIFY_TOKENS: dict[str, dict[str, Any]] = {}
-_RESET_TOKENS: dict[str, dict[str, Any]] = {}
 
 
 class RegisterRequest(BaseModel):
@@ -120,31 +126,27 @@ def _hash_token(raw_token: str) -> str:
     return hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
 
 
-def _mint_token(store: dict[str, dict[str, Any]], payload: dict[str, Any], expires_minutes: int) -> str:
-    raw_token = secrets.token_urlsafe(48)
-    token_hash = _hash_token(raw_token)
-    store[token_hash] = {
-        **payload,
-        "expires_at": datetime.now(timezone.utc) + timedelta(minutes=expires_minutes),
-    }
-    return raw_token
+def _mint_token(store: dict[str, dict[str, Any]] | None, payload: dict[str, Any], expires_minutes: int, token_type: str = "verify") -> str:
+    # store arg is kept for signature compatibility; use DB-backed minting
+    try:
+        return db.mint_token(DB_path, payload, expires_minutes, token_type)
+    except Exception as exc:
+        logger.exception("Failed to mint token: %s", exc)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal error")
 
 
-def _consume_token(store: dict[str, dict[str, Any]], raw_token: str) -> dict[str, Any]:
-    token_hash = _hash_token(raw_token)
-    payload = store.pop(token_hash, None)
-    if not payload:
+def _consume_token(store: dict[str, dict[str, Any]] | None, raw_token: str, token_type: str = "verify") -> dict[str, Any]:
+    try:
+        return db.consume_token(DB_path, raw_token, token_type)
+    except KeyError:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired token")
-    if datetime.now(timezone.utc) > payload["expires_at"]:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Token expired")
-    return payload
+    except Exception as exc:
+        logger.exception("Failed to consume token: %s", exc)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal error")
 
 
 def _find_username_by_email(email: str) -> str | None:
-    for username, user in USERS_DB.items():
-        if user.get("email") == email:
-            return username
-    return None
+    return db.get_user_by_email(DB_path, email)
 
 
 def _validate_username(username: str) -> str:
@@ -265,7 +267,7 @@ async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends
             detail=f"Too many login attempts. Try again in {LOGIN_WINDOW_MINUTES} minutes",
         )
 
-    user = USERS_DB.get(username)
+    user = db.get_user(DB_path, username)
     if not user or not verify_password(form_data.password, user["password_hash"]):
         _record_attempt(_LOGIN_ATTEMPTS, client_key)
         raise HTTPException(
@@ -302,20 +304,14 @@ async def register(payload: RegisterRequest, request: Request) -> dict[str, Any]
             detail=f"Too many registration attempts. Try again in {REGISTER_WINDOW_MINUTES} minutes",
         )
 
-    if username in USERS_DB or _find_username_by_email(email):
+    if db.get_user(DB_path, username) or _find_username_by_email(email):
         _record_attempt(_REGISTER_ATTEMPTS, client_key)
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Account already exists")
 
-    USERS_DB[username] = {
-        "password_hash": pwd_context.hash(payload.password),
-        "role": role,
-        "email": email,
-        "verified": False,
-        "created_at": datetime.now(timezone.utc),
-    }
+    db.create_user(DB_path, username, pwd_context.hash(payload.password), role, email, False, datetime.now(timezone.utc))
 
     _REGISTER_ATTEMPTS.pop(client_key, None)
-    verify_token = _mint_token(_VERIFY_TOKENS, {"username": username, "email": email}, VERIFY_TOKEN_EXPIRE_MINUTES)
+    verify_token = _mint_token(None, {"username": username, "email": email}, VERIFY_TOKEN_EXPIRE_MINUTES, token_type="verify")
     _send_verification_email(username, email, verify_token)
 
     response: dict[str, Any] = {
@@ -329,13 +325,13 @@ async def register(payload: RegisterRequest, request: Request) -> dict[str, Any]
 
 @auth_router.get("/verify-email")
 async def verify_email(token: str = Query(..., min_length=16)) -> dict[str, Any]:
-    payload = _consume_token(_VERIFY_TOKENS, token)
+    payload = _consume_token(None, token, token_type="verify")
     username = payload.get("username")
-    user = USERS_DB.get(username)
+    user = db.get_user(DB_path, username)
     if not user:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Account not found")
 
-    user["verified"] = True
+    db.update_user_verified(DB_path, username, True)
     return {"message": "Email verified successfully. You can now sign in."}
 
 
@@ -354,11 +350,11 @@ async def resend_verification(payload: ResendVerificationRequest, request: Reque
     if not username:
         return {"message": "If the email exists, a verification link has been sent."}
 
-    user = USERS_DB.get(username, {})
+    user = db.get_user(DB_path, username) or {}
     if user.get("verified", False):
         return {"message": "Email is already verified."}
 
-    verify_token = _mint_token(_VERIFY_TOKENS, {"username": username, "email": email}, VERIFY_TOKEN_EXPIRE_MINUTES)
+    verify_token = _mint_token(None, {"username": username, "email": email}, VERIFY_TOKEN_EXPIRE_MINUTES, token_type="verify")
     _send_verification_email(username, email, verify_token)
 
     response: dict[str, Any] = {"message": "Verification email sent."}
@@ -383,11 +379,11 @@ async def request_password_reset(payload: PasswordResetRequest, request: Request
     if not username:
         return {"message": "If an account exists, a password reset link has been sent."}
 
-    user = USERS_DB.get(username, {})
+    user = db.get_user(DB_path, username) or {}
     if not user.get("verified", False):
         return {"message": "If an account exists, a password reset link has been sent."}
 
-    reset_token = _mint_token(_RESET_TOKENS, {"username": username, "email": email}, RESET_TOKEN_EXPIRE_MINUTES)
+    reset_token = _mint_token(None, {"username": username, "email": email}, RESET_TOKEN_EXPIRE_MINUTES, token_type="reset")
     _send_password_reset_email(username, email, reset_token)
 
     response: dict[str, Any] = {"message": "If an account exists, a password reset link has been sent."}
@@ -399,13 +395,13 @@ async def request_password_reset(payload: PasswordResetRequest, request: Request
 @auth_router.post("/password-reset/confirm")
 async def confirm_password_reset(payload: PasswordResetConfirmRequest) -> dict[str, Any]:
     _validate_password_strength(payload.new_password)
-    token_payload = _consume_token(_RESET_TOKENS, payload.token)
+    token_payload = _consume_token(None, payload.token, token_type="reset")
     username = token_payload.get("username")
-    user = USERS_DB.get(username)
+    user = db.get_user(DB_path, username)
     if not user:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Account not found")
 
-    user["password_hash"] = pwd_context.hash(payload.new_password)
+    db.update_user_password(DB_path, username, pwd_context.hash(payload.new_password))
     return {"message": "Password reset successful. You can now sign in."}
 
 
