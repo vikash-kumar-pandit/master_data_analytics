@@ -3,6 +3,14 @@ import axios from 'axios';
 import { API_BASE_URL } from '../config';
 
 const STORAGE_KEY = 'my_data_platform_auth';
+const STORAGE =
+  typeof window !== 'undefined'
+    ? window.sessionStorage || window.localStorage
+    : {
+        getItem: () => null,
+        setItem: () => {},
+        removeItem: () => {},
+      };
 
 const AuthContext = createContext(null);
 
@@ -17,8 +25,14 @@ function applyAuthHeader(token) {
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
     try {
-      const raw = window.localStorage.getItem(STORAGE_KEY);
+      const raw = STORAGE.getItem(STORAGE_KEY);
       const parsed = raw ? JSON.parse(raw) : null;
+      const isExpired = parsed?.expiresAt && Date.now() > parsed.expiresAt;
+      if (isExpired) {
+        STORAGE.removeItem(STORAGE_KEY);
+        applyAuthHeader(null);
+        return null;
+      }
       applyAuthHeader(parsed?.token || null);
       return parsed;
     } catch {
@@ -30,14 +44,32 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     applyAuthHeader(user?.token || null);
     if (user) {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
+      STORAGE.setItem(STORAGE_KEY, JSON.stringify(user));
     } else {
-      window.localStorage.removeItem(STORAGE_KEY);
+      STORAGE.removeItem(STORAGE_KEY);
     }
   }, [user]);
 
+  useEffect(() => {
+    const interceptor = axios.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        if (error?.response?.status === 401) {
+          applyAuthHeader(null);
+          setUser(null);
+        }
+        return Promise.reject(error);
+      }
+    );
+
+    return () => {
+      axios.interceptors.response.eject(interceptor);
+    };
+  }, []);
+
   const login = async (username, password) => {
     const body = new URLSearchParams();
+    body.append('grant_type', 'password');
     body.append('username', username);
     body.append('password', password);
 
@@ -51,6 +83,26 @@ export function AuthProvider({ children }) {
       username: response.data.username || username,
       role: response.data.role,
       token: response.data.access_token,
+      expiresAt: Date.now() + (response.data.expires_in || 7200) * 1000,
+    };
+
+    applyAuthHeader(userData.token);
+    setUser(userData);
+    return userData;
+  };
+
+  const register = async (username, password, role = 'viewer') => {
+    const response = await axios.post(`${API_BASE_URL}/api/auth/register`, {
+      username,
+      password,
+      role,
+    });
+
+    const userData = {
+      username: response.data.username || username,
+      role: response.data.role,
+      token: response.data.access_token,
+      expiresAt: Date.now() + (response.data.expires_in || 7200) * 1000,
     };
 
     applyAuthHeader(userData.token);
@@ -68,6 +120,7 @@ export function AuthProvider({ children }) {
       user,
       isAuthenticated: Boolean(user?.token),
       login,
+      register,
       logout,
     }),
     [user]
