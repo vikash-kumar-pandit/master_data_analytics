@@ -189,14 +189,63 @@ def log_audit_event(
         logging.getLogger("audit").error("Failed to log audit event: %s", e)
 
 
-def get_audit_logs(db_path: str, limit: int = 100, offset: int = 0) -> list[dict[str, Any]]:
+def get_audit_logs(
+    db_path: str,
+    limit: int = 100,
+    offset: int = 0,
+    username: str | None = None,
+    event_type: str | None = None,
+    status: str | None = None,
+    email: str | None = None,
+    client_ip: str | None = None,
+    search: str | None = None,
+    since: str | None = None,
+    until: str | None = None,
+) -> list[dict[str, Any]]:
     """Retrieve audit logs, most recent first."""
     conn = _connect(db_path)
     cur = conn.cursor()
+    conditions = []
+    params: list[Any] = []
+
+    if username:
+        conditions.append("username = ?")
+        params.append(username)
+    if event_type:
+        conditions.append("event_type = ?")
+        params.append(event_type)
+    if status:
+        conditions.append("status = ?")
+        params.append(status)
+    if email:
+        conditions.append("email = ?")
+        params.append(email)
+    if client_ip:
+        conditions.append("client_ip = ?")
+        params.append(client_ip)
+    if search:
+        conditions.append(
+            "(" \
+            "LOWER(COALESCE(username, '')) LIKE ? OR " \
+            "LOWER(COALESCE(email, '')) LIKE ? OR " \
+            "LOWER(COALESCE(client_ip, '')) LIKE ? OR " \
+            "LOWER(COALESCE(message, '')) LIKE ?"
+            ")"
+        )
+        search_term = f"%{search.lower()}%"
+        params.extend([search_term, search_term, search_term, search_term])
+    if since:
+        conditions.append("timestamp >= ?")
+        params.append(since)
+    if until:
+        conditions.append("timestamp <= ?")
+        params.append(until)
+
+    where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
     cur.execute(
         "SELECT id, event_type, username, email, client_ip, status, message, timestamp "
-        "FROM audit_log ORDER BY id DESC LIMIT ? OFFSET ?",
-        (limit, offset),
+        f"FROM audit_log {where_clause} ORDER BY id DESC LIMIT ? OFFSET ?",
+        (*params, limit, offset),
     )
     rows = cur.fetchall()
     conn.close()

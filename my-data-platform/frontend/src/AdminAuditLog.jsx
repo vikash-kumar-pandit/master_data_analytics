@@ -12,7 +12,10 @@ export default function AdminAuditLog() {
   const [limit, setLimit] = useState(50);
   const [offset, setOffset] = useState(0);
   const [eventFilter, setEventFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [since, setSince] = useState('');
+  const [until, setUntil] = useState('');
 
   const fetchAuditLogs = async () => {
     if (!API_BASE_URL) {
@@ -23,7 +26,16 @@ export default function AdminAuditLog() {
     setLoading(true);
     setError('');
     try {
-      const response = await axios.get(`${API_BASE_URL}/api/auth/audit-log?limit=${limit}&offset=${offset}`);
+      const params = new URLSearchParams();
+      params.set('limit', String(limit));
+      params.set('offset', String(offset));
+      if (eventFilter) params.set('event_type', eventFilter);
+      if (statusFilter) params.set('status', statusFilter);
+      if (searchTerm) params.set('search', searchTerm);
+      if (since) params.set('since', new Date(since).toISOString());
+      if (until) params.set('until', new Date(until).toISOString());
+
+      const response = await axios.get(`${API_BASE_URL}/api/auth/audit-log?${params.toString()}`);
       setLogs(response.data.logs || []);
     } catch (err) {
       setError(err.response?.data?.detail || 'Failed to fetch audit logs');
@@ -36,17 +48,16 @@ export default function AdminAuditLog() {
     if (user?.role === 'admin') {
       fetchAuditLogs();
     }
-  }, [limit, offset, user?.role]);
+  }, [limit, offset, eventFilter, statusFilter, since, until, user?.role]);
 
   // Filter logs based on event type and search term
   const filteredLogs = logs.filter((log) => {
-    const matchesEvent = !eventFilter || log.event_type === eventFilter;
     const matchesSearch =
       !searchTerm ||
       log.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       log.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       log.client_ip?.includes(searchTerm);
-    return matchesEvent && matchesSearch;
+    return matchesSearch;
   });
 
   // Get unique event types for filter dropdown
@@ -171,6 +182,78 @@ export default function AdminAuditLog() {
           </div>
         </div>
 
+        <div style={{ marginBottom: '12px', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+          <div style={{ flex: 1, minWidth: '160px' }}>
+            <label htmlFor="status-filter" style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>
+              Status:
+            </label>
+            <select
+              id="status-filter"
+              value={statusFilter}
+              onChange={(e) => {
+                setStatusFilter(e.target.value);
+                setOffset(0);
+              }}
+              style={{
+                width: '100%',
+                padding: '8px',
+                border: '1px solid #ddd',
+                borderRadius: '4px',
+                fontSize: '14px',
+              }}
+            >
+              <option value="">All Statuses</option>
+              <option value="success">success</option>
+              <option value="failed">failed</option>
+            </select>
+          </div>
+
+          <div style={{ flex: 1, minWidth: '180px' }}>
+            <label htmlFor="since-filter" style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>
+              From:
+            </label>
+            <input
+              id="since-filter"
+              type="datetime-local"
+              value={since}
+              onChange={(e) => {
+                setSince(e.target.value);
+                setOffset(0);
+              }}
+              style={{
+                width: '100%',
+                padding: '8px',
+                border: '1px solid #ddd',
+                borderRadius: '4px',
+                fontSize: '14px',
+              }}
+            />
+          </div>
+
+          <div style={{ flex: 1, minWidth: '180px' }}>
+            <label htmlFor="until-filter" style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>
+              To:
+            </label>
+            <input
+              id="until-filter"
+              type="datetime-local"
+              value={until}
+              onChange={(e) => {
+                setUntil(e.target.value);
+                setOffset(0);
+              }}
+              style={{
+                width: '100%',
+                padding: '8px',
+                border: '1px solid #ddd',
+                borderRadius: '4px',
+                fontSize: '14px',
+              }}
+            />
+          </div>
+
+        </div>
+
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center', fontSize: '14px' }}>
           <label htmlFor="limit">
             Rows per page:
@@ -190,6 +273,13 @@ export default function AdminAuditLog() {
             </select>
           </label>
         </div>
+      </div>
+
+      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '16px' }}>
+        {eventFilter ? <span className="badge badge-success">event: {eventFilter}</span> : null}
+        {statusFilter ? <span className="badge badge-success">status: {statusFilter}</span> : null}
+        {since ? <span className="badge badge-success">from: {since}</span> : null}
+        {until ? <span className="badge badge-success">to: {until}</span> : null}
       </div>
 
       {loading ? (

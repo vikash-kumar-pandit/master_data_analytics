@@ -621,9 +621,29 @@ async def get_audit_log(
     current_user: dict[str, Any] = Depends(require_role(["admin"])),
     limit: int = Query(100, ge=1, le=500),
     offset: int = Query(0, ge=0),
+    username: str | None = Query(None),
+    event_type: str | None = Query(None),
+    status: str | None = Query(None),
+    email: str | None = Query(None),
+    client_ip: str | None = Query(None),
+    search: str | None = Query(None),
+    since: str | None = Query(None),
+    until: str | None = Query(None),
 ) -> dict[str, Any]:
     """Retrieve audit logs (admin only)."""
-    logs = db.get_audit_logs(DB_path, limit=limit, offset=offset)
+    logs = db.get_audit_logs(
+        DB_path,
+        limit=limit,
+        offset=offset,
+        username=username,
+        event_type=event_type,
+        status=status,
+        email=email,
+        client_ip=client_ip,
+        search=search,
+        since=since,
+        until=until,
+    )
     db.log_audit_event(
         DB_path,
         event_type="audit_log_access",
