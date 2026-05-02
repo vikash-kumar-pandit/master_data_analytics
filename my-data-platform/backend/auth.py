@@ -44,7 +44,7 @@ SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
 SMTP_FROM = os.getenv("SMTP_FROM", "noreply@datasaas.local")
 IS_PRODUCTION = APP_ENV == "production"
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+pwd_context = CryptContext(schemes=["pbkdf2_sha256", "bcrypt"], default="pbkdf2_sha256", deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 auth_router = APIRouter(tags=["auth"])
 logger = logging.getLogger("auth")
@@ -79,7 +79,7 @@ try:
             db.create_user(
                 DB_path,
                 username,
-                pwd_context.hash(user["password"]),
+                _hash_password(user["password"]),
                 user["role"],
                 user["email"],
                 user.get("verified", False),
@@ -133,6 +133,10 @@ def _record_attempt(bucket: dict[str, list[datetime]], key: str):
 
 def _hash_token(raw_token: str) -> str:
     return hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
+
+
+def _hash_password(password: str) -> str:
+    return pwd_context.hash(password)
 
 
 def _mint_token(store: dict[str, dict[str, Any]] | None, payload: dict[str, Any], expires_minutes: int, token_type: str = "verify") -> str:
@@ -365,7 +369,7 @@ async def register(payload: RegisterRequest, request: Request) -> dict[str, Any]
         )
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Account already exists")
 
-    db.create_user(DB_path, username, pwd_context.hash(payload.password), role, email, False, datetime.now(timezone.utc))
+    db.create_user(DB_path, username, _hash_password(payload.password), role, email, False, datetime.now(timezone.utc))
 
     db.log_audit_event(
         DB_path,
@@ -580,7 +584,7 @@ async def confirm_password_reset(payload: PasswordResetConfirmRequest) -> dict[s
             )
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Account not found")
 
-        db.update_user_password(DB_path, username, pwd_context.hash(payload.new_password))
+        db.update_user_password(DB_path, username, _hash_password(payload.new_password))
         
         db.log_audit_event(
             DB_path,
@@ -618,7 +622,7 @@ async def get_me(current_user: dict[str, Any] = Depends(get_current_user)) -> di
 
 @auth_router.get("/audit-log")
 async def get_audit_log(
-    current_user: dict[str, Any] = Depends(require_role(["admin"])),
+    current_user: dict[str, Any] = Depends(get_current_user),
     limit: int = Query(100, ge=1, le=500),
     offset: int = Query(0, ge=0),
     username: str | None = Query(None),
@@ -631,6 +635,8 @@ async def get_audit_log(
     until: str | None = Query(None),
 ) -> dict[str, Any]:
     """Retrieve audit logs (admin only)."""
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Operation not permitted for this role")
     logs = db.get_audit_logs(
         DB_path,
         limit=limit,
