@@ -53,6 +53,12 @@ def init_db(db_path: str):
     cur = conn.cursor()
     for sql in DB_SCHEMA.values():
         cur.execute(sql)
+    # Ensure an index on timestamp for efficient range queries and cleanup
+    try:
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_audit_timestamp ON audit_log(timestamp)")
+    except Exception:
+        # If the audit_log table doesn't exist yet or index creation fails, ignore
+        pass
     conn.commit()
     conn.close()
 
@@ -290,3 +296,22 @@ def get_audit_logs_for_user(db_path: str, username: str, limit: int = 50) -> lis
         }
         for row in rows
     ]
+
+
+def cleanup_old_audit_logs(db_path: str, days: int = 90) -> int:
+    """Delete audit_log rows older than `days` days. Returns number of rows deleted."""
+    if days <= 0:
+        return 0
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=int(days))).isoformat()
+    conn = _connect(db_path)
+    cur = conn.cursor()
+    try:
+        # Use parameterized query to avoid injection and ensure correct binding
+        cur.execute("DELETE FROM audit_log WHERE timestamp < ?", (cutoff,))
+        deleted = cur.rowcount
+        conn.commit()
+    finally:
+        conn.close()
+
+    # Return the number of deleted rows for auditing
+    return deleted

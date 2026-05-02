@@ -654,6 +654,39 @@ async def get_audit_log(
     return {"logs": logs, "count": len(logs), "limit": limit, "offset": offset}
 
 
+
+@auth_router.post("/audit-log/cleanup")
+async def cleanup_audit_logs(
+    days: int | None = Query(None, ge=1, le=3650),
+    current_user: dict[str, Any] = Depends(get_current_user),
+) -> dict[str, Any]:
+    """Admin-only: delete audit log entries older than `days`. If `days` omitted, uses AUDIT_LOG_RETENTION_DAYS env var (default 90)."""
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Operation not permitted for this role")
+
+    retention = int(os.getenv("AUDIT_LOG_RETENTION_DAYS", "90"))
+    days_to_delete = int(days) if days is not None else retention
+    try:
+        deleted = db.cleanup_old_audit_logs(DB_path, days_to_delete)
+        db.log_audit_event(
+            DB_path,
+            event_type="audit_log_cleanup",
+            status="success",
+            username=current_user.get("username"),
+            message=f"Deleted {deleted} audit log entries older than {days_to_delete} days",
+        )
+        return {"deleted": deleted}
+    except Exception as exc:
+        db.log_audit_event(
+            DB_path,
+            event_type="audit_log_cleanup",
+            status="failed",
+            username=current_user.get("username"),
+            message=str(exc),
+        )
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Cleanup failed")
+
+
 def require_role(allowed_roles: list[str]):
     allowed = set(allowed_roles)
 

@@ -177,8 +177,19 @@ curl -H "Authorization: Bearer YOUR_ADMIN_TOKEN" \
 The audit logging is automatically enabled. No additional configuration is needed beyond setting up the auth system.
 
 **Environment Variables** (optional):
-- `AUDIT_LOG_RETENTION_DAYS`: Days to retain audit logs (default: 90) - to be implemented
-- `AUDIT_LOG_BATCH_SIZE`: Number of logs to process in batch operations - to be implemented
+- `AUDIT_LOG_RETENTION_DAYS`: Days to retain audit logs (default: 90). The application
+   will remove audit entries older than this value. You can override it at runtime.
+- `AUDIT_LOG_CLEANUP_INTERVAL_SECONDS`: How often the scheduled cleanup runs (seconds,
+   default: 86400 = 24 hours).
+
+## Retention & Manual Cleanup
+
+The backend includes an automated retention task and a manual admin trigger:
+
+- Scheduled cleanup: runs in a background daemon thread on application startup and
+   deletes entries older than `AUDIT_LOG_RETENTION_DAYS` once per `AUDIT_LOG_CLEANUP_INTERVAL_SECONDS`.
+- Manual trigger (admin-only): `POST /api/auth/audit-log/cleanup?days=NUMBER` will delete
+   entries older than `NUMBER` days; omit `days` to use the configured retention value.
 
 ## Future Enhancements
 

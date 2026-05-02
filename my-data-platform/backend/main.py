@@ -24,6 +24,7 @@ from ml_advanced import run_nocode_clustering, run_nocode_nlp
 from security import sanitize_for_llm
 from xai_engine import generate_shap_explanations
 from auth import auth_router, require_role
+import auth as auth_module
 from observability import setup_observability
 from catalog import get_catalog_entry, is_catalog_entry_visible, list_catalog_entries_for_user, register_catalog_entry
 from connectors import read_dataset_from_bytes
@@ -46,6 +47,38 @@ except ImportError:
 app = FastAPI(title="Stateless No-Code Big Data Platform")
 app.include_router(auth_router, prefix="/api/auth")
 setup_observability(app)
+
+
+@app.on_event("startup")
+async def start_audit_cleanup_thread():
+    """Spawn a daemon thread that runs audit log cleanup once per day.
+
+    Controlled via `AUDIT_LOG_RETENTION_DAYS` (days to keep, default 90) and
+    `AUDIT_LOG_CLEANUP_INTERVAL_SECONDS` (interval between runs, default 86400).
+    """
+    import threading
+    import time
+    import logging
+
+    retention = int(os.getenv("AUDIT_LOG_RETENTION_DAYS", "90"))
+    interval = int(os.getenv("AUDIT_LOG_CLEANUP_INTERVAL_SECONDS", str(24 * 60 * 60)))
+
+    def _cleanup_loop():
+        logger = logging.getLogger("audit")
+        logger.info("Starting audit cleanup thread: retention=%s days interval=%s seconds", retention, interval)
+        try:
+            while True:
+                try:
+                    deleted = auth_module.db.cleanup_old_audit_logs(auth_module.DB_PATH, retention)
+                    logger.info("Scheduled audit cleanup removed %d rows older than %d days", deleted, retention)
+                except Exception as exc:
+                    logger.exception("Scheduled audit cleanup failed: %s", exc)
+                time.sleep(interval)
+        except Exception as exc:
+            logger.exception("Audit cleanup thread terminated unexpectedly: %s", exc)
+
+    thread = threading.Thread(target=_cleanup_loop, name="audit-cleanup", daemon=True)
+    thread.start()
 
 
 class InsightRequest(BaseModel):
