@@ -117,19 +117,25 @@ export default function Login() {
           throw new Error('Passwords do not match.');
         }
         const response = await registerWithEmail(normalizedUsername, normalizedEmail, password, role);
-        setMessage(response?.message || 'Registration complete. Check your email to verify your account.');
-        if (response?.verification_token) {
-          setMessage(
-            `${response?.message || 'Registration complete.'} Dev token: ${response.verification_token}`
-          );
+        const responseParts = [response?.message || 'Registration complete. Check your email to verify your account.'];
+        if (response?.delivery_note) {
+          responseParts.push(response.delivery_note);
         }
+        if (response?.verification_token) {
+          responseParts.push(`Dev token: ${response.verification_token}`);
+        }
+        setMessage(responseParts.join(' '));
         setMode('login');
       } else if (mode === 'forgot') {
         const response = await requestPasswordReset(normalizedEmail);
-        setMessage(response?.message || 'If account exists, reset link sent.');
-        if (response?.reset_token) {
-          setMessage(`${response?.message || ''} Dev token: ${response.reset_token}`.trim());
+        const responseParts = [response?.message || 'If account exists, reset link sent.'];
+        if (response?.delivery_note) {
+          responseParts.push(response.delivery_note);
         }
+        if (response?.reset_token) {
+          responseParts.push(`Dev token: ${response.reset_token}`);
+        }
+        setMessage(responseParts.join(' '));
       } else if (mode === 'reset') {
         if (password !== confirmPassword) {
           throw new Error('Passwords do not match.');
@@ -141,10 +147,14 @@ export default function Login() {
         setConfirmPassword('');
       } else if (mode === 'resend') {
         const response = await resendVerification(normalizedEmail);
-        setMessage(response?.message || 'Verification email sent.');
-        if (response?.verification_token) {
-          setMessage(`${response?.message || ''} Dev token: ${response.verification_token}`.trim());
+        const responseParts = [response?.message || 'Verification email sent.'];
+        if (response?.delivery_note) {
+          responseParts.push(response.delivery_note);
         }
+        if (response?.verification_token) {
+          responseParts.push(`Dev token: ${response.verification_token}`);
+        }
+        setMessage(responseParts.join(' '));
       } else {
         await login(normalizedUsername, password);
         navigate('/', { replace: true });

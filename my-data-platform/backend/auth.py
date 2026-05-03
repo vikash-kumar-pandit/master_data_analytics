@@ -43,6 +43,7 @@ SMTP_USER = os.getenv("SMTP_USER")
 SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
 SMTP_FROM = os.getenv("SMTP_FROM", "noreply@datasaas.local")
 IS_PRODUCTION = APP_ENV == "production"
+EMAIL_DELIVERY_CONFIGURED = bool(SMTP_HOST and SMTP_HOST.strip())
 
 pwd_context = CryptContext(schemes=["pbkdf2_sha256", "bcrypt"], default="pbkdf2_sha256", deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
@@ -205,7 +206,7 @@ def _validate_role(role: str) -> str:
 
 def _send_email(to_email: str, subject: str, body: str):
     # body may be a tuple (plain, html) or a single plaintext string
-    if not SMTP_HOST or not SMTP_HOST.strip():
+    if not EMAIL_DELIVERY_CONFIGURED:
         logger.info("Email provider not configured. Simulated email to %s subject=%s", to_email, subject)
         if isinstance(body, tuple):
             logger.info("Email plain: %s", body[0])
@@ -242,6 +243,15 @@ def _send_password_reset_email(username: str, email: str, token: str):
     reset_link = f"{APP_BASE_URL}/login?reset_token={token}"
     plain, html = email_templates.render_password_reset_email(username, reset_link, RESET_TOKEN_EXPIRE_MINUTES)
     _send_email(email, "Reset your DataSaaS password", (plain, html))
+
+
+def _delivery_status_response(note: str) -> dict[str, str]:
+    if EMAIL_DELIVERY_CONFIGURED:
+        return {"delivery_mode": "email", "delivery_note": note}
+    return {
+        "delivery_mode": "simulation",
+        "delivery_note": "Email is not configured on this server. Use the dev token below to continue locally.",
+    }
 
 
 def verify_password(plain_password: str, password_hash: str) -> bool:
@@ -389,6 +399,7 @@ async def register(payload: RegisterRequest, request: Request) -> dict[str, Any]
         "message": "Registration successful. Please verify your email before login.",
         "verification_required": True,
     }
+    response.update(_delivery_status_response("Verification email sent."))
     if not IS_PRODUCTION:
         response["verification_token"] = verify_token
     return response
@@ -494,6 +505,7 @@ async def resend_verification(payload: ResendVerificationRequest, request: Reque
     )
 
     response: dict[str, Any] = {"message": "Verification email sent."}
+    response.update(_delivery_status_response("Verification email sent."))
     if not IS_PRODUCTION:
         response["verification_token"] = verify_token
     return response
@@ -560,6 +572,7 @@ async def request_password_reset(payload: PasswordResetRequest, request: Request
     )
 
     response: dict[str, Any] = {"message": "If an account exists, a password reset link has been sent."}
+    response.update(_delivery_status_response("Password reset email sent."))
     if not IS_PRODUCTION:
         response["reset_token"] = reset_token
     return response

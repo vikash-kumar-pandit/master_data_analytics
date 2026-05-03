@@ -3781,5 +3781,44 @@
     "duration_ms": 30,
     "client_ip": "127.0.0.1",
     "work_units": 0
+  },
+  {
+    "id": "14b16d8d-e9ee-4098-b442-d0459ab8a0cb",
+    "timestamp": "2026-05-03T05:32:32.690877+00:00",
+    "username": "anonymous",
+    "role": "guest",
+    "method": "POST",
+    "path": "/api/auth/resend-verification",
+    "action": "other",
+    "status_code": 200,
+    "duration_ms": 40,
+    "client_ip": "127.0.0.1",
+    "work_units": 1
+  },
+  {
+    "id": "2f626d54-6e3c-4783-90a3-0ccecf6965af",
+    "timestamp": "2026-05-03T05:33:19.386755+00:00",
+    "username": "anonymous",
+    "role": "guest",
+    "method": "POST",
+    "path": "/api/auth/resend-verification",
+    "action": "other",
+    "status_code": 200,
+    "duration_ms": 43,
+    "client_ip": "127.0.0.1",
+    "work_units": 1
+  },
+  {
+    "id": "8279debe-c830-48bd-a010-62e9c4dac321",
+    "timestamp": "2026-05-03T05:36:06.100190+00:00",
+    "username": "anonymous",
+    "role": "guest",
+    "method": "POST",
+    "path": "/api/auth/resend-verification",
+    "action": "other",
+    "status_code": 200,
+    "duration_ms": 36,
+    "client_ip": "127.0.0.1",
+    "work_units": 1
   }
 ]
