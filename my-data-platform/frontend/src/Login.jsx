@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
+import { getAxiosErrorMessage } from './utils/errorHandler';
 
 export default function Login() {
   const {
@@ -58,7 +59,7 @@ export default function Login() {
         }
       } catch (verificationError) {
         if (!cancelled) {
-          setError(verificationError?.response?.data?.detail || 'Email verification failed.');
+          setError(getAxiosErrorMessage(verificationError, 'Email verification failed.'));
         }
       }
     };
@@ -117,10 +118,8 @@ export default function Login() {
         navigate('/', { replace: true });
       }
     } catch (requestError) {
-      setError(
-        requestError?.response?.data?.detail ||
-          (mode === 'login' ? 'Login failed.' : 'Authentication request failed.')
-      );
+      const fallback = mode === 'login' ? 'Login failed.' : 'Authentication request failed.';
+      setError(getAxiosErrorMessage(requestError, fallback));
     } finally {
       setLoading(false);
     }
