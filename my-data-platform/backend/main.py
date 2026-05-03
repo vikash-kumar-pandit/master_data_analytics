@@ -43,6 +43,16 @@ try:
 except ImportError:
     OpenAI = None
 
+# Initialize Sentry if configured
+try:
+    import sentry_sdk
+    SENTRY_DSN = os.getenv('SENTRY_DSN') or os.getenv('SENTRY_DSN_URL')
+    if SENTRY_DSN:
+        sentry_sdk.init(dsn=SENTRY_DSN, traces_sample_rate=float(os.getenv('SENTRY_TRACES', 0.1)))
+except Exception:
+    # If sentry not installed or init fails, continue without crashing
+    pass
+
 
 app = FastAPI(title="Stateless No-Code Big Data Platform")
 app.include_router(auth_router, prefix="/api/auth")

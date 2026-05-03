@@ -52,6 +52,7 @@ export default function ReportBuilder() {
   const onGenerate = async () => {
     try {
       setLoading(true);
+      // Ensure sections include any captured images
       const payload = { title, subtitle, sections };
       const res = await apiService.generateStructuredReport(payload, format);
       // res is a Blob because we requested responseType blob
@@ -73,6 +74,74 @@ export default function ReportBuilder() {
     }
   };
 
+  // Scan DOM for canvas elements to allow attaching chart images
+  const [availableCanvases, setAvailableCanvases] = React.useState([]);
+  const [dragSrcIndex, setDragSrcIndex] = React.useState(null);
+
+  // Simple templates
+  const templates = [
+    {
+      id: 'exec_summary',
+      name: 'Executive Summary Template',
+      sections: [
+        { title: 'Executive Summary', body: '' },
+        { title: 'Key Findings', body: '' },
+        { title: 'Recommendations', body: '' },
+      ],
+    },
+    {
+      id: 'full_report',
+      name: 'Full Analytics Report',
+      sections: [
+        { title: 'Executive Summary', body: '' },
+        { title: 'Data Overview', body: '' },
+        { title: 'Metrics & Trends', body: '' },
+        { title: 'Anomalies', body: '' },
+        { title: 'Appendix', body: '' },
+      ],
+    },
+  ];
+
+  const applyTemplate = (tid) => {
+    const t = templates.find((x) => x.id === tid);
+    if (t) setSections(t.sections.map((s) => ({ ...s })));
+  };
+
+  const scanCanvases = () => {
+    try {
+      const canvases = Array.from(document.querySelectorAll('canvas'));
+      const list = canvases.map((c, i) => ({
+        id: c.id || `canvas-${i}`,
+        el: c,
+        label: c.getAttribute('data-chart-name') || c.id || `Chart ${i + 1}`,
+      }));
+      setAvailableCanvases(list);
+    } catch (err) {
+      console.warn('canvas scan failed', err);
+      setAvailableCanvases([]);
+    }
+  };
+
+  React.useEffect(() => {
+    // initial scan
+    scanCanvases();
+    // also listen for DOM changes (simple interval refresh)
+    const t = setInterval(scanCanvases, 3000);
+    return () => clearInterval(t);
+  }, []);
+
+  const attachCanvasToSection = (sectionIndex, canvasEntry) => {
+    try {
+      const canvas = canvasEntry.el;
+      const dataUrl = canvas.toDataURL('image/png');
+      updateSection(sectionIndex, { ...sections[sectionIndex], image: dataUrl });
+      success(`Attached ${canvasEntry.label} to section ${sectionIndex + 1}`);
+    } catch (err) {
+      console.error('attach failed', err);
+      error('Failed to attach chart image');
+    }
+  };
+
   return (
     <DashboardLayout>
       <div className="p-6">
@@ -91,7 +160,48 @@ export default function ReportBuilder() {
         <div className="mb-4">
           <label className="block mb-2 font-medium">Sections</label>
           {sections.map((section, idx) => (
-            <SectionEditor key={idx} section={section} index={idx} onChange={updateSection} onRemove={removeSection} />
+            <div key={idx}
+              draggable
+              onDragStart={(e) => { setDragSrcIndex(idx); e.dataTransfer.setData('text/plain', String(idx)); }}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => {
+                e.preventDefault();
+                const src = Number(e.dataTransfer.getData('text/plain'));
+                const dst = idx;
+                if (!Number.isNaN(src) && src !== dst) {
+                  const copy = [...sections];
+                  const [moved] = copy.splice(src, 1);
+                  copy.splice(dst, 0, moved);
+                  setSections(copy);
+                }
+                setDragSrcIndex(null);
+              }}
+            >
+              <SectionEditor section={section} index={idx} onChange={updateSection} onRemove={removeSection} />
+
+              <div className="flex items-center gap-2 mb-4">
+                <select
+                  className="p-2 border rounded"
+                  onChange={(e) => {
+                    const sel = availableCanvases.find((c) => c.id === e.target.value);
+                    if (sel) attachCanvasToSection(idx, sel);
+                  }}
+                  defaultValue=""
+                >
+                  <option value="">Attach a chart (canvas)...</option>
+                  {availableCanvases.map((c) => (
+                    <option key={c.id} value={c.id}>{c.label}</option>
+                  ))}
+                </select>
+
+                {section.image && (
+                  <div className="flex items-center gap-2">
+                    <img alt={`preview-${idx}`} src={section.image} className="w-28 h-20 object-contain border" />
+                    <button onClick={() => updateSection(idx, { ...section, image: undefined })} className="px-2 py-1 bg-red-600 text-white rounded">Remove Image</button>
+                  </div>
+                )}
+              </div>
+            </div>
           ))}
           <button onClick={addSection} className="px-3 py-2 bg-blue-600 text-white rounded">Add Section</button>
         </div>
@@ -105,9 +215,18 @@ export default function ReportBuilder() {
         </div>
 
         <div>
-          <button onClick={onGenerate} disabled={loading} className="px-4 py-2 bg-green-600 text-white rounded">
-            {loading ? 'Generating…' : 'Generate Report'}
-          </button>
+          <div className="flex items-center gap-3">
+            <button onClick={onGenerate} disabled={loading} className="px-4 py-2 bg-green-600 text-white rounded">
+              {loading ? 'Generating…' : 'Generate Report'}
+            </button>
+            <div className="ml-4">
+              <label className="block text-sm mb-1">Templates</label>
+              <select onChange={(e) => applyTemplate(e.target.value)} className="p-2 border rounded">
+                <option value="">Apply template...</option>
+                {templates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+              </select>
+            </div>
+          </div>
         </div>
       </div>
     </DashboardLayout>

@@ -5,6 +5,7 @@ import ReportBuilder from './pages/ReportBuilder';
 import DataQuality from './pages/DataQuality';
 import PredictiveAnalytics from './pages/PredictiveAnalytics';
 import RealTimeInsights from './pages/RealTimeInsights';
+import ScheduleExports from './pages/ScheduleExports';
 import Login from './Login';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
@@ -65,6 +66,14 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['viewer', 'analyst', 'admin']}>
                 <RealTimeInsights />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/schedule"
+            element={
+              <ProtectedRoute allowedRoles={['analyst', 'admin']}>
+                <ScheduleExports />
               </ProtectedRoute>
             }
           />

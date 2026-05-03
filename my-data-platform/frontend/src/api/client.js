@@ -169,6 +169,11 @@ export const apiService = {
   forecasting: {
     forecast: (payload) => apiClient.post('/api/analytics/forecast', payload),
   },
+  // Scheduling endpoints
+  schedule: {
+    create: (payload) => apiClient.post('/api/schedule/create', payload),
+    list: () => apiClient.get('/api/schedule/list'),
+  },
   // Real-time insights helper (WebSocket wrapper)
   realtime: {
     connectInsights: ({ onMessage, onOpen, onClose, onError, path = '/ws/insights' } = {}) => {
