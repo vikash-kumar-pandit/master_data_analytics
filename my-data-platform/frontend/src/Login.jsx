@@ -3,6 +3,28 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import { getAxiosErrorMessage } from './utils/errorHandler';
 
+const USERNAME_PATTERN = /^[a-z0-9_.-]{3,64}$/;
+const EMAIL_PATTERN = /^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,63}$/i;
+
+function validatePasswordStrength(password) {
+  if (password.length < 8) {
+    return 'Password must be at least 8 characters.';
+  }
+  if (!/[A-Z]/.test(password)) {
+    return 'Password must contain an uppercase letter.';
+  }
+  if (!/[a-z]/.test(password)) {
+    return 'Password must contain a lowercase letter.';
+  }
+  if (!/\d/.test(password)) {
+    return 'Password must contain a number.';
+  }
+  if (!/[^A-Za-z0-9]/.test(password)) {
+    return 'Password must contain a special character.';
+  }
+  return '';
+}
+
 export default function Login() {
   const {
     login,
@@ -81,6 +103,16 @@ export default function Login() {
       const normalizedEmail = email.trim().toLowerCase();
 
       if (mode === 'register') {
+        if (!USERNAME_PATTERN.test(normalizedUsername.toLowerCase())) {
+          throw new Error('Username must be 3-64 characters and use only letters, numbers, underscore, hyphen, or dot.');
+        }
+        if (!EMAIL_PATTERN.test(normalizedEmail)) {
+          throw new Error('Please enter a valid email address.');
+        }
+        const passwordError = validatePasswordStrength(password);
+        if (passwordError) {
+          throw new Error(passwordError);
+        }
         if (password !== confirmPassword) {
           throw new Error('Passwords do not match.');
         }
@@ -119,7 +151,15 @@ export default function Login() {
       }
     } catch (requestError) {
       const fallback = mode === 'login' ? 'Login failed.' : 'Authentication request failed.';
-      setError(getAxiosErrorMessage(requestError, fallback));
+      const responseStatus = requestError?.response?.status;
+      const messageText = getAxiosErrorMessage(requestError, fallback);
+
+      if (responseStatus === 403 && mode === 'login') {
+        setError(`${messageText} Use Resend Verify if you need a new verification link.`);
+        return;
+      }
+
+      setError(messageText);
     } finally {
       setLoading(false);
     }
