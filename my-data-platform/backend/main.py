@@ -338,23 +338,76 @@ async def analytics_query(
     payload: QuestionRequest,
     current_user: dict = Depends(require_role(["viewer", "analyst", "admin"])),
 ):
-    result = build_question_fallback(payload.question, payload.rows, payload.previous_rows)
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    try:
+        # Validate payload
+        if not payload:
+            raise ValueError("Request payload is missing")
+        
+        # Validate question
+        question = str(payload.question or "").strip()
+        if not question:
+            raise ValueError("Question cannot be empty")
+        
+        # Validate rows
+        if not isinstance(payload.rows, list):
+            raise ValueError("rows must be a list")
+        
+        if not payload.rows:
+            raise ValueError("No data provided")
+        
+        # Validate row structure
+        for i, row in enumerate(payload.rows):
+            if not isinstance(row, dict):
+                raise ValueError(f"Row {i} is not a dictionary")
+        
+        # Validate previous_rows if provided
+        if payload.previous_rows is not None and not isinstance(payload.previous_rows, list):
+            raise ValueError("previous_rows must be a list or None")
+        
+        result = build_question_fallback(question, payload.rows, payload.previous_rows)
+        
+        if not result:
+            raise ValueError("Failed to generate analysis result")
 
-    register_catalog_entry(
-        action="question",
-        dataset_name=None,
-        analysis={
-            "rows": len(payload.rows),
-            "cols": len(payload.rows[0]) if payload.rows else 0,
-            "question": payload.question,
-            "intent": result.get("intent"),
-        },
-        rows=payload.rows[:50],
-        source="question_answering",
-        created_by=current_user,
-    )
+        try:
+            register_catalog_entry(
+                action="question",
+                dataset_name=None,
+                analysis={
+                    "rows": len(payload.rows),
+                    "cols": len(payload.rows[0]) if payload.rows else 0,
+                    "question": question,
+                    "intent": result.get("intent"),
+                },
+                rows=payload.rows[:50],
+                source="question_answering",
+                created_by=current_user,
+            )
+        except Exception as reg_exc:
+            logger.warning(f"Failed to register catalog entry: {reg_exc}")
+            # Continue anyway, catalog registration is non-critical
 
-    return result
+        return result
+    
+    except ValueError as ve:
+        logger.error(f"Validation error in analytics_query: {ve}")
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as exc:
+        logger.exception(f"Error in analytics_query: {exc}")
+        # Return fallback result
+        return {
+            "intent": "descriptive",
+            "question": str(payload.question or "Unknown"),
+            "answer": f"Analysis failed: {str(exc)[:100]}",
+            "report_title": "Analysis Failed",
+            "report_sections": [],
+            "recommendations": ["Please check your data format and try again."],
+            "chart_data": [],
+            "error": str(exc),
+        }
 
 
 @app.post("/api/analytics/forecast")
@@ -362,31 +415,66 @@ async def analytics_forecast(
     payload: ForecastRequest,
     current_user: dict = Depends(require_role(["viewer", "analyst", "admin"])),
 ):
+    import logging
+    logger = logging.getLogger(__name__)
+    
     try:
-        result = forecast_metric(
-            rows=payload.rows,
-            metric_column=payload.metric_column,
-            date_column=payload.date_column,
-            horizon=max(1, min(payload.horizon, 30)),
-        )
+        # Validate payload
+        if not payload:
+            raise ValueError("Request payload is missing")
+        
+        # Validate rows
+        if not isinstance(payload.rows, list):
+            raise ValueError("rows must be a list")
+        
+        if not payload.rows:
+            raise ValueError("No data provided for forecasting")
+        
+        # Validate horizon
+        horizon = payload.horizon or 7
+        if not isinstance(horizon, int) or horizon < 1:
+            horizon = 7
+        horizon = max(1, min(horizon, 30))  # Limit to 1-30 range
+        
+        try:
+            result = forecast_metric(
+                rows=payload.rows,
+                metric_column=payload.metric_column,
+                date_column=payload.date_column,
+                horizon=horizon,
+            )
+        except Exception as forecast_exc:
+            logger.exception(f"Forecasting failed: {forecast_exc}")
+            raise HTTPException(status_code=400, detail=f"Forecasting failed: {str(forecast_exc)[:200]}") from forecast_exc
+
+        try:
+            register_catalog_entry(
+                action="forecast",
+                dataset_name=None,
+                analysis={
+                    "rows": len(payload.rows),
+                    "cols": len(payload.rows[0]) if payload.rows else 0,
+                    "metric_column": payload.metric_column,
+                    "date_column": payload.date_column,
+                },
+                rows=payload.rows[:50],
+                source="forecasting",
+                created_by=current_user,
+            )
+        except Exception as reg_exc:
+            logger.warning(f"Failed to register catalog entry for forecast: {reg_exc}")
+            # Continue anyway, catalog registration is non-critical
+
+        return result
+    
+    except ValueError as ve:
+        logger.error(f"Validation error in forecast: {ve}")
+        raise HTTPException(status_code=400, detail=str(ve))
+    except HTTPException:
+        raise
     except Exception as exc:
-        raise HTTPException(status_code=400, detail=f"Forecasting failed: {exc}") from exc
-
-    register_catalog_entry(
-        action="forecast",
-        dataset_name=None,
-        analysis={
-            "rows": len(payload.rows),
-            "cols": len(payload.rows[0]) if payload.rows else 0,
-            "metric_column": payload.metric_column,
-            "date_column": payload.date_column,
-        },
-        rows=payload.rows[:50],
-        source="forecasting",
-        created_by=current_user,
-    )
-
-    return result
+        logger.exception(f"Unexpected error in analytics_forecast: {exc}")
+        raise HTTPException(status_code=500, detail=f"Forecasting failed: {str(exc)[:200]}")
 
 
 @app.post("/api/analytics/compare")
@@ -394,22 +482,61 @@ async def analytics_compare(
     payload: CompareRequest,
     current_user: dict = Depends(require_role(["viewer", "analyst", "admin"])),
 ):
-    result = compare_versions(before_rows=payload.before_rows, after_rows=payload.after_rows)
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    try:
+        # Validate payload
+        if not payload:
+            raise ValueError("Request payload is missing")
+        
+        # Validate before_rows
+        if not isinstance(payload.before_rows, list):
+            raise ValueError("before_rows must be a list")
+        
+        if not payload.before_rows:
+            raise ValueError("before_rows cannot be empty")
+        
+        # Validate after_rows
+        if not isinstance(payload.after_rows, list):
+            raise ValueError("after_rows must be a list")
+        
+        if not payload.after_rows:
+            raise ValueError("after_rows cannot be empty")
+        
+        try:
+            result = compare_versions(before_rows=payload.before_rows, after_rows=payload.after_rows)
+        except Exception as compare_exc:
+            logger.exception(f"Comparison failed: {compare_exc}")
+            raise HTTPException(status_code=400, detail=f"Comparison failed: {str(compare_exc)[:200]}") from compare_exc
 
-    register_catalog_entry(
-        action="compare",
-        dataset_name=None,
-        analysis={
-            "rows": len(payload.after_rows),
-            "cols": len(payload.after_rows[0]) if payload.after_rows else 0,
-            "before_rows": len(payload.before_rows),
-        },
-        rows=payload.after_rows[:50],
-        source="version_comparison",
-        created_by=current_user,
-    )
+        try:
+            register_catalog_entry(
+                action="compare",
+                dataset_name=None,
+                analysis={
+                    "rows": len(payload.after_rows),
+                    "cols": len(payload.after_rows[0]) if payload.after_rows else 0,
+                    "before_rows": len(payload.before_rows),
+                },
+                rows=payload.after_rows[:50],
+                source="version_comparison",
+                created_by=current_user,
+            )
+        except Exception as reg_exc:
+            logger.warning(f"Failed to register catalog entry for comparison: {reg_exc}")
+            # Continue anyway, catalog registration is non-critical
 
-    return result
+        return result
+    
+    except ValueError as ve:
+        logger.error(f"Validation error in compare: {ve}")
+        raise HTTPException(status_code=400, detail=str(ve))
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception(f"Unexpected error in analytics_compare: {exc}")
+        raise HTTPException(status_code=500, detail=f"Comparison failed: {str(exc)[:200]}")
 
 
 @app.post("/api/analytics/report")
@@ -417,35 +544,86 @@ async def analytics_report_pdf(
     payload: StructuredReportRequest,
     _: dict = Depends(require_role(["viewer", "analyst", "admin"])),
 ):
+    import logging
+    logger = logging.getLogger(__name__)
+    
     try:
-        output_format = (payload.output_format or "pdf").strip().lower()
-        if output_format == "pptx":
-            file_bytes = generate_structured_report_pptx(
-                title=payload.title,
-                subtitle=payload.subtitle,
-                sections=payload.sections,
-            )
-            media_type = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
-            filename = "analytics_report.pptx"
+        # Validate payload
+        if not payload:
+            raise ValueError("Request payload is missing")
+        
+        # Validate title and subtitle
+        title = str(payload.title or "Report").strip()
+        if not title:
+            title = "Analytics Report"
+        
+        subtitle = str(payload.subtitle or "").strip()
+        
+        # Validate sections
+        if payload.sections is None:
+            sections = []
+        elif isinstance(payload.sections, list):
+            sections = payload.sections
         else:
-            file_bytes = generate_structured_report_pdf(
-                title=payload.title,
-                subtitle=payload.subtitle,
-                sections=payload.sections,
+            raise ValueError("sections must be a list")
+        
+        # Validate section format
+        validated_sections = []
+        for i, section in enumerate(sections):
+            if not isinstance(section, dict):
+                logger.warning(f"Section {i} is not a dict, skipping")
+                continue
+            validated_sections.append(section)
+        
+        # Validate output format
+        output_format = (payload.output_format or "pdf").strip().lower()
+        if output_format not in ["pdf", "pptx"]:
+            output_format = "pdf"
+        
+        try:
+            if output_format == "pptx":
+                file_bytes = generate_structured_report_pptx(
+                    title=title,
+                    subtitle=subtitle,
+                    sections=validated_sections,
+                )
+                media_type = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+                filename = "analytics_report.pptx"
+            else:
+                file_bytes = generate_structured_report_pdf(
+                    title=title,
+                    subtitle=subtitle,
+                    sections=validated_sections,
+                )
+                media_type = "application/pdf"
+                filename = "analytics_report.pdf"
+            
+            if not file_bytes:
+                raise ValueError("Report generation returned empty content")
+            
+            buffer = io.BytesIO(file_bytes)
+            return StreamingResponse(
+                buffer,
+                media_type=media_type,
+                headers={"Content-Disposition": f'attachment; filename="{filename}"'},
             )
-            media_type = "application/pdf"
-            filename = "analytics_report.pdf"
-
-        buffer = io.BytesIO(file_bytes)
-        return StreamingResponse(
-            buffer,
-            media_type=media_type,
-            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
-        )
+        except ValueError as ve:
+            logger.error(f"Validation error in report generation: {ve}")
+            raise HTTPException(status_code=400, detail=f"Invalid report data: {str(ve)}")
+        except Exception as inner_exc:
+            logger.exception(f"Error generating report: {inner_exc}")
+            raise HTTPException(status_code=500, detail=f"Failed to generate report: {str(inner_exc)[:200]}")
+    
+    except HTTPException:
+        raise
     except ValueError as ve:
+        logger.error(f"Input validation error: {ve}")
         raise HTTPException(status_code=400, detail=str(ve))
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Failed to generate report: {str(exc)}")
+        logger.exception(f"Unexpected error in analytics_report_pdf: {exc}")
+        raise HTTPException(status_code=500, detail=f"Failed to generate report: {str(exc)[:200]}")
+
+
 
 
 @app.post("/api/share/create")
@@ -1502,5 +1680,17 @@ async def admin_stats(_: dict = Depends(require_role(["admin"]))):
 
 if __name__ == "__main__":
     import uvicorn
+    import os
 
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    # Allow toggling debug/reload/log level via environment variables
+    debug_flag = os.getenv('DEBUG', os.getenv('DEBUG_MODE', 'false')).lower() in ('1', 'true', 'yes')
+    reload_flag = os.getenv('RELOAD', 'false').lower() in ('1', 'true', 'yes') or debug_flag
+    log_level = os.getenv('LOG_LEVEL', os.getenv('LOGLEVEL', 'info')).lower()
+
+    uvicorn.run(
+        app,
+        host="0.0.0.0",
+        port=int(os.getenv('PORT', 8000)),
+        reload=reload_flag,
+        log_level=log_level,
+    )

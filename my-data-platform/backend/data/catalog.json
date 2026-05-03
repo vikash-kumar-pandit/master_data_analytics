@@ -3181,5 +3181,179 @@
     },
     "cleaning_stats": [],
     "ml_results": {}
+  },
+  {
+    "id": "386ecdf1-820e-46be-858b-f7f744e04f9f",
+    "created_at": "2026-05-02T16:54:22.359248+00:00",
+    "fingerprint": "1ebb50d62d8516a12e9127eb83c6fe2d732cdf6b92f94328b82c7449d206e332",
+    "dataset_name": "test_data.csv",
+    "action": "upload",
+    "source": "file_upload",
+    "target_column": null,
+    "created_by": {
+      "username": "admin_user",
+      "role": "admin"
+    },
+    "summary": {
+      "action": "upload",
+      "dataset_name": "test_data.csv",
+      "rows": 5,
+      "cols": 4,
+      "domain": "Unknown",
+      "target_column": null,
+      "source": "file_upload",
+      "owner": "admin_user"
+    },
+    "analysis": {
+      "category": "Customer",
+      "rows": 5,
+      "cols": 4,
+      "column_info": [
+        "name",
+        "age",
+        "salary",
+        "department"
+      ],
+      "null_counts": [
+        {
+          "name": 0,
+          "age": 0,
+          "salary": 0,
+          "department": 0
+        }
+      ],
+      "audit_errors": [],
+      "domain_info": {
+        "domain": "Unknown",
+        "confidence": 0,
+        "columns": [],
+        "error": "OPENAI_API_KEY is not configured."
+      }
+    },
+    "cleaning_stats": [],
+    "ml_results": {}
+  },
+  {
+    "id": "482459f2-928e-40d1-9689-5e89d1aae6b7",
+    "created_at": "2026-05-02T16:55:39.582213+00:00",
+    "fingerprint": "2d233e4f04c234f40376f855fc213bbd88ea360427ff2c35b02f5bc5f7911738",
+    "dataset_name": null,
+    "action": "question",
+    "source": "question_answering",
+    "target_column": null,
+    "created_by": {
+      "username": "admin_user",
+      "role": "admin"
+    },
+    "summary": {
+      "action": "question",
+      "dataset_name": null,
+      "rows": 5,
+      "cols": 4,
+      "domain": null,
+      "target_column": null,
+      "source": "question_answering",
+      "owner": "admin_user"
+    },
+    "analysis": {
+      "rows": 5,
+      "cols": 4,
+      "question": "What is the average salary by department?",
+      "intent": "compare"
+    },
+    "cleaning_stats": [],
+    "ml_results": {}
+  },
+  {
+    "id": "d24e3453-8982-4d75-b7b4-ce3b4596113a",
+    "created_at": "2026-05-02T16:55:51.352292+00:00",
+    "fingerprint": "2d233e4f04c234f40376f855fc213bbd88ea360427ff2c35b02f5bc5f7911738",
+    "dataset_name": null,
+    "action": "question",
+    "source": "question_answering",
+    "target_column": null,
+    "created_by": {
+      "username": "admin_user",
+      "role": "admin"
+    },
+    "summary": {
+      "action": "question",
+      "dataset_name": null,
+      "rows": 5,
+      "cols": 4,
+      "domain": null,
+      "target_column": null,
+      "source": "question_answering",
+      "owner": "admin_user"
+    },
+    "analysis": {
+      "rows": 5,
+      "cols": 4,
+      "question": "What is the average salary by department?",
+      "intent": "compare"
+    },
+    "cleaning_stats": [],
+    "ml_results": {}
+  },
+  {
+    "id": "c93dd42b-ccd6-41ec-829e-e38aac5ab16d",
+    "created_at": "2026-05-02T16:56:39.612171+00:00",
+    "fingerprint": "3f42da7004cbba974505e3f5534db1a15d63cae4192933c0d410818eb6624d7a",
+    "dataset_name": null,
+    "action": "compare",
+    "source": "version_comparison",
+    "target_column": null,
+    "created_by": {
+      "username": "admin_user",
+      "role": "admin"
+    },
+    "summary": {
+      "action": "compare",
+      "dataset_name": null,
+      "rows": 5,
+      "cols": 4,
+      "domain": null,
+      "target_column": null,
+      "source": "version_comparison",
+      "owner": "admin_user"
+    },
+    "analysis": {
+      "rows": 5,
+      "cols": 4,
+      "before_rows": 5
+    },
+    "cleaning_stats": [],
+    "ml_results": {}
+  },
+  {
+    "id": "38dd5740-2ad0-445c-a264-390da8984537",
+    "created_at": "2026-05-02T16:57:01.875778+00:00",
+    "fingerprint": "842d6982efe72f4f3a44bc87ca48ae589be4ca378a655795d878a0b9308be429",
+    "dataset_name": null,
+    "action": "forecast",
+    "source": "forecasting",
+    "target_column": null,
+    "created_by": {
+      "username": "admin_user",
+      "role": "admin"
+    },
+    "summary": {
+      "action": "forecast",
+      "dataset_name": null,
+      "rows": 5,
+      "cols": 4,
+      "domain": null,
+      "target_column": null,
+      "source": "forecasting",
+      "owner": "admin_user"
+    },
+    "analysis": {
+      "rows": 5,
+      "cols": 4,
+      "metric_column": null,
+      "date_column": null
+    },
+    "cleaning_stats": [],
+    "ml_results": {}
   }
 ]

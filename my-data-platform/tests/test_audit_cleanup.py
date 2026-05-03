@@ -5,7 +5,7 @@ import sqlite3
 from datetime import datetime, timedelta, timezone
 
 # Ensure backend module path is importable
-backend_dir = pathlib.Path(__file__).resolve().parents[1] / "my-data-platform" / "backend"
+backend_dir = pathlib.Path(__file__).resolve().parents[1] / "backend"
 if str(backend_dir) not in sys.path:
     sys.path.insert(0, str(backend_dir))
 

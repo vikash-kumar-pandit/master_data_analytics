@@ -1,0 +1,207 @@
+name: Deploy to GCP
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  REGISTRY: gcr.io
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  BACKEND_IMAGE: data-platform-backend
+  FRONTEND_IMAGE: data-platform-frontend
+
+jobs:
+  # Linting & Testing
+  test:
+    runs-on: ubuntu-latest
+    name: Test Backend
+    
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: test_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+          pip install -r ../requirements-enhanced.txt
+
+      - name: Lint with flake8
+        run: |
+          cd backend
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+      - name: Type check with mypy
+        run: |
+          cd backend
+          mypy . --ignore-missing-imports || true
+
+      - name: Run pytest
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/test_db
+          REDIS_URL: redis://localhost:6379
+        run: |
+          cd backend
+          pytest tests/ -v --cov=. --cov-report=xml
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./backend/coverage.xml
+          flags: unittests
+          name: codecov-umbrella
+
+  # Build & Push Images
+  build:
+    runs-on: ubuntu-latest
+    name: Build Docker Images
+    if: github.event_name == 'push'
+    needs: test
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+
+      - name: Configure Docker for GCR
+        run: gcloud auth configure-docker
+
+      - name: Build backend image
+        run: |
+          docker build -t ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.BACKEND_IMAGE }}:${{ github.sha }} \
+            -t ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.BACKEND_IMAGE }}:latest \
+            -f backend/Dockerfile \
+            ./backend
+
+      - name: Push backend image
+        run: |
+          docker push ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.BACKEND_IMAGE }}:${{ github.sha }}
+          docker push ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.BACKEND_IMAGE }}:latest
+
+      - name: Build frontend image
+        run: |
+          docker build -t ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.FRONTEND_IMAGE }}:${{ github.sha }} \
+            -t ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.FRONTEND_IMAGE }}:latest \
+            -f frontend/Dockerfile \
+            ./frontend
+
+      - name: Push frontend image
+        run: |
+          docker push ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
+          docker push ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.FRONTEND_IMAGE }}:latest
+
+  # Deploy to GCP
+  deploy:
+    runs-on: ubuntu-latest
+    name: Deploy to Cloud Run
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: build
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+
+      - name: Deploy backend to Cloud Run
+        run: |
+          gcloud run deploy data-platform-api \
+            --image ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.BACKEND_IMAGE }}:${{ github.sha }} \
+            --platform managed \
+            --region us-central1 \
+            --memory 4Gi \
+            --cpu 2 \
+            --set-env-vars DATABASE_URL=${{ secrets.GCP_DATABASE_URL }},REDIS_URL=${{ secrets.GCP_REDIS_URL }},OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }} \
+            --allow-unauthenticated \
+            --project ${{ env.PROJECT_ID }}
+
+      - name: Deploy Celery worker
+        run: |
+          gcloud run jobs deploy data-platform-worker \
+            --image ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.BACKEND_IMAGE }}:${{ github.sha }} \
+            --region us-central1 \
+            --memory 4Gi \
+            --cpu 2 \
+            --set-env-vars DATABASE_URL=${{ secrets.GCP_DATABASE_URL }},REDIS_URL=${{ secrets.GCP_REDIS_URL }} \
+            --command celery \
+            --args -A,worker.celery_app,worker,--loglevel=info \
+            --project ${{ env.PROJECT_ID }}
+
+      - name: Upload frontend to Cloud Storage
+        run: |
+          cd frontend
+          npm ci
+          npm run build
+          gsutil -m cp -r dist/* gs://${{ env.PROJECT_ID }}-static/
+
+      - name: Invalidate CDN cache
+        run: |
+          gcloud compute backend-buckets invalidate-cdn-cache data-platform-backend-bucket \
+            --path "/*" \
+            --project ${{ env.PROJECT_ID }}
+
+      - name: Notify deployment
+        uses: 8398a7/action-slack@v3
+        if: always()
+        with:
+          status: ${{ job.status }}
+          text: 'Deployment to GCP: ${{ job.status }}'
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
