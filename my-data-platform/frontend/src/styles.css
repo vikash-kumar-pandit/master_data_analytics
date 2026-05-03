@@ -2038,8 +2038,6 @@ p {
   background-color: rgba(220, 38, 38, 0.1);
   color: #dc2626;
 }
-  border-radius: var(--radius-md);
-}
 
 .quality-stat {
   display: flex;
