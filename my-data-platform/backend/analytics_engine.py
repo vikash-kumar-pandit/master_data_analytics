@@ -38,6 +38,14 @@ def _to_dataframe(rows: list[dict[str, Any]] | None) -> pl.DataFrame:
     return pl.from_dicts(rows)
 
 
+def _validate_rows_input(rows: Any, label: str = "rows") -> list[dict[str, Any]]:
+    if not isinstance(rows, list):
+        raise TypeError(f"{label} must be a list of dictionaries")
+    if any(not isinstance(row, dict) for row in rows):
+        raise TypeError(f"{label} must contain dictionaries only")
+    return rows
+
+
 def _find_columns(columns: list[str], keywords: list[str]) -> list[str]:
     matches: list[str] = []
     lowered = {column: column.lower() for column in columns}
@@ -98,6 +106,10 @@ def _best_metric_column(dataframe: pl.DataFrame, question: str) -> str | None:
                     return matches[0]
 
     numeric = _numeric_columns(dataframe)
+    date_like = set(_find_columns(columns, DATE_KEYWORDS))
+    for column_name in numeric:
+        if column_name not in date_like:
+            return column_name
     if numeric:
         return numeric[0]
     return None
@@ -132,10 +144,13 @@ def _compute_trend_points(
     if metric_column not in dataframe.columns:
         return []
 
-    working = dataframe.select([pl.col(metric_column).cast(pl.Float64, strict=False).fill_null(0.0).alias(metric_column), *([date_column] if date_column and date_column in dataframe.columns else [])])
+    selected_columns: list[pl.Expr] = [pl.col(metric_column).cast(pl.Float64, strict=False).fill_null(0.0).alias(metric_column)]
+    if date_column and date_column in dataframe.columns and date_column != metric_column:
+        selected_columns.append(pl.col(date_column).cast(pl.Utf8).alias(date_column))
+
+    working = dataframe.select(selected_columns)
 
     if date_column and date_column in dataframe.columns:
-        working = working.with_columns(pl.col(date_column).cast(pl.Utf8).alias(date_column))
         aggregated = (
             working.group_by(date_column)
             .agg(pl.col(metric_column).sum().alias(metric_column))
@@ -226,6 +241,10 @@ def analyze_question(
     previous_rows: list[dict[str, Any]] | None = None,
     analysis: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    rows = _validate_rows_input(rows)
+    if previous_rows is not None:
+        previous_rows = _validate_rows_input(previous_rows, label="previous_rows")
+
     dataframe = _to_dataframe(rows)
     previous_dataframe = _to_dataframe(previous_rows)
 
@@ -451,6 +470,7 @@ def forecast_metric(
     date_column: str | None = None,
     horizon: int = 7,
 ) -> dict[str, Any]:
+    rows = _validate_rows_input(rows)
     dataframe = _to_dataframe(rows)
     if dataframe.is_empty():
         return {
@@ -511,6 +531,8 @@ def forecast_metric(
 
 
 def compare_versions(*, before_rows: list[dict[str, Any]], after_rows: list[dict[str, Any]]) -> dict[str, Any]:
+    before_rows = _validate_rows_input(before_rows, label="before_rows")
+    after_rows = _validate_rows_input(after_rows, label="after_rows")
     before = _to_dataframe(before_rows)
     after = _to_dataframe(after_rows)
 
@@ -595,5 +617,10 @@ def compare_versions(*, before_rows: list[dict[str, Any]], after_rows: list[dict
         ],
         "chart_data": numeric_delta_summary,
         "comparison": comparison,
+        "row_delta": comparison["row_delta"],
+        "column_delta": comparison["column_delta"],
+        "null_delta": comparison["null_delta"],
+        "added_columns": comparison["added_columns"],
+        "removed_columns": comparison["removed_columns"],
         "metrics": numeric_delta_summary,
     }

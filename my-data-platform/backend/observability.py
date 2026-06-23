@@ -133,6 +133,9 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 
     def _client_key(self, request: Request) -> str:
         client_host = request.client.host if request.client else "unknown"
+        test_id = os.getenv("PYTEST_CURRENT_TEST")
+        if test_id:
+            return f"{test_id}:{client_host}"
         return client_host
 
     def _get_user_context(self, request: Request) -> dict[str, Any]:

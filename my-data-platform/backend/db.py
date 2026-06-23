@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import sqlite3
 from datetime import datetime, timezone, timedelta
 from typing import Any
@@ -36,6 +37,19 @@ DB_SCHEMA = {
         "status TEXT NOT NULL,"
         "message TEXT,"
         "timestamp TEXT NOT NULL"
+        ")"
+    ),
+    "profiles": (
+        "CREATE TABLE IF NOT EXISTS profiles ("
+        "username TEXT PRIMARY KEY,"
+        "full_name TEXT,"
+        "bio TEXT,"
+        "avatar_url TEXT,"
+        "phone TEXT,"
+        "location TEXT,"
+        "preferences TEXT NOT NULL DEFAULT '{}',"
+        "updated_at TEXT NOT NULL,"
+        "FOREIGN KEY (username) REFERENCES users(username) ON DELETE CASCADE"
         ")"
     ),
 }
@@ -315,3 +329,101 @@ def cleanup_old_audit_logs(db_path: str, days: int = 90) -> int:
 
     # Return the number of deleted rows for auditing
     return deleted
+
+
+def get_profile(db_path: str, username: str) -> dict[str, Any] | None:
+    conn = _connect(db_path)
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT username, password_hash, role, email, verified, created_at FROM users WHERE username = ?",
+        (username,),
+    )
+    user_row = cur.fetchone()
+    if not user_row:
+        conn.close()
+        return None
+
+    cur.execute(
+        "SELECT username, full_name, bio, avatar_url, phone, location, preferences, updated_at "
+        "FROM profiles WHERE username = ?",
+        (username,),
+    )
+    profile_row = cur.fetchone()
+    conn.close()
+
+    user = {
+        "username": user_row["username"],
+        "password_hash": user_row["password_hash"],
+        "role": user_row["role"],
+        "email": user_row["email"],
+        "verified": bool(user_row["verified"]),
+        "created_at": datetime.fromisoformat(user_row["created_at"]) if user_row["created_at"] else None,
+    }
+
+    if not profile_row:
+        return {
+            **user,
+            "full_name": "",
+            "bio": "",
+            "avatar_url": "",
+            "phone": "",
+            "location": "",
+            "preferences": {},
+            "updated_at": None,
+        }
+
+    try:
+        preferences = json.loads(profile_row["preferences"] or "{}")
+    except json.JSONDecodeError:
+        preferences = {}
+
+    return {
+        **user,
+        "full_name": profile_row["full_name"] or "",
+        "bio": profile_row["bio"] or "",
+        "avatar_url": profile_row["avatar_url"] or "",
+        "phone": profile_row["phone"] or "",
+        "location": profile_row["location"] or "",
+        "preferences": preferences,
+        "updated_at": profile_row["updated_at"],
+    }
+
+
+def upsert_profile(db_path: str, username: str, **fields) -> dict[str, Any] | None:
+    allowed_fields = {"full_name", "bio", "avatar_url", "phone", "location", "preferences"}
+    profile_fields = {key: value for key, value in fields.items() if key in allowed_fields and value is not None}
+    if not profile_fields:
+        return get_profile(db_path, username)
+
+    if "preferences" in profile_fields:
+        profile_fields["preferences"] = json.dumps(profile_fields["preferences"], ensure_ascii=False)
+
+    updated_at = datetime.now(timezone.utc).isoformat()
+    conn = _connect(db_path)
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT username FROM users WHERE username = ?", (username,))
+        if not cur.fetchone():
+            conn.close()
+            return None
+
+        placeholders = ", ".join(f"{field} = ?" for field in profile_fields)
+        insert_values = [username, *profile_fields.values(), updated_at]
+        update_values = list(profile_fields.values())
+        values = insert_values + update_values
+        cur.execute(
+            f"INSERT INTO profiles (username, {', '.join(profile_fields.keys())}, updated_at) "
+            f"VALUES (?, {', '.join('?' for _ in profile_fields)}, ?) "
+            f"ON CONFLICT(username) DO UPDATE SET {placeholders}, updated_at = excluded.updated_at",
+            tuple(values),
+        )
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        conn.close()
+        raise
+    finally:
+        conn.close()
+
+    return get_profile(db_path, username)
+

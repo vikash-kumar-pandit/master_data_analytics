@@ -3,6 +3,7 @@ import os
 import json
 import zipfile
 import base64
+from typing import Any
 
 from fastapi import FastAPI, UploadFile, File, HTTPException, Body, Form, Depends
 from fastapi.middleware.cors import CORSMiddleware
@@ -54,13 +55,11 @@ except Exception:
     pass
 
 
-app = FastAPI(title="Stateless No-Code Big Data Platform")
-app.include_router(auth_router, prefix="/api/auth")
-setup_observability(app)
+from contextlib import asynccontextmanager
 
 
-@app.on_event("startup")
-async def start_audit_cleanup_thread():
+@asynccontextmanager
+async def lifespan(app_context: FastAPI):
     """Spawn a daemon thread that runs audit log cleanup once per day.
 
     Controlled via `AUDIT_LOG_RETENTION_DAYS` (days to keep, default 90) and
@@ -89,6 +88,12 @@ async def start_audit_cleanup_thread():
 
     thread = threading.Thread(target=_cleanup_loop, name="audit-cleanup", daemon=True)
     thread.start()
+    yield
+
+
+app = FastAPI(title="Stateless No-Code Big Data Platform", lifespan=lifespan)
+app.include_router(auth_router, prefix="/api/auth")
+setup_observability(app)
 
 
 class InsightRequest(BaseModel):
@@ -154,7 +159,7 @@ class CompareRequest(BaseModel):
 class StructuredReportRequest(BaseModel):
     title: str
     subtitle: str
-    sections: list[dict]
+    sections: list[Any]
     output_format: str = "pdf"
 
 
@@ -1522,13 +1527,27 @@ async def predict_background(
     try:
         task = async_run_automl.delay(file_b64, target_column)
     except Exception as exc:
-        raise HTTPException(
-            status_code=503,
-            detail=(
-                "Background worker is unavailable. Ensure Redis and Celery worker are running, "
-                "or use synchronous /automl endpoint for now."
-            ),
-        ) from exc
+        logger.warning(f"Background worker unavailable, falling back to sync AutoML: {exc}")
+        try:
+            file_bytes = base64.b64decode(file_b64)
+            from utils import analyze_dataframe
+            from connectors import read_dataset_from_bytes
+            dataframe = read_dataset_from_bytes(file_bytes, filename="dataset.csv")
+            ml_result = run_automl_stateless(dataframe, target_column)
+            task_id = "sync-" + base64.b64encode(f"{target_column}:{datetime.now(timezone.utc).isoformat()}".encode()).decode()[:16]
+            return {
+                "task_id": task_id,
+                "message": "AutoML completed synchronously (worker unavailable).",
+                "sync_result": ml_result,
+            }
+        except Exception as sync_exc:
+            raise HTTPException(
+                status_code=503,
+                detail=(
+                    "Background worker is unavailable and synchronous fallback also failed: "
+                    f"{str(sync_exc)[:200]}"
+                ),
+            ) from sync_exc
     return {"task_id": task.id, "message": "AutoML started in background."}
 
 

@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 import polars as pl
+
+logger = logging.getLogger("ml_advanced")
 
 
 _nlp_classifier = None
@@ -49,33 +52,65 @@ def run_nocode_nlp(dataframe: pl.DataFrame, text_column: str, categories: list[s
     if not categories:
         raise ValueError("At least one category is required")
 
-    classifier = _get_zero_shot_classifier()
-
     texts = dataframe.get_column(text_column).cast(pl.Utf8, strict=False).fill_null("").to_list()
-    predicted_labels: list[str] = []
-    scores: list[float] = []
 
-    for text in texts:
-        normalized_text = (text or "").strip()
-        if not normalized_text:
-            predicted_labels.append("Unknown")
-            scores.append(0.0)
-            continue
+    try:
+        classifier = _get_zero_shot_classifier()
+        predicted_labels: list[str] = []
+        scores: list[float] = []
 
-        prediction: dict[str, Any] = classifier(normalized_text, candidate_labels=categories)
-        labels = prediction.get("labels", [])
-        label_scores = prediction.get("scores", [])
+        for text in texts:
+            normalized_text = (text or "").strip()
+            if not normalized_text:
+                predicted_labels.append("Unknown")
+                scores.append(0.0)
+                continue
 
-        if labels:
-            predicted_labels.append(str(labels[0]))
-            scores.append(float(label_scores[0]) if label_scores else 0.0)
-        else:
-            predicted_labels.append("Unknown")
-            scores.append(0.0)
+            prediction: dict[str, Any] = classifier(normalized_text, candidate_labels=categories)
+            labels = prediction.get("labels", [])
+            label_scores = prediction.get("scores", [])
 
-    return dataframe.with_columns(
-        [
-            pl.Series(name="AI_Text_Category", values=predicted_labels),
-            pl.Series(name="AI_Text_Category_Confidence", values=scores),
-        ]
-    )
+            if labels:
+                predicted_labels.append(str(labels[0]))
+                scores.append(float(label_scores[0]) if label_scores else 0.0)
+            else:
+                predicted_labels.append("Unknown")
+                scores.append(0.0)
+
+        return dataframe.with_columns(
+            [
+                pl.Series(name="AI_Text_Category", values=predicted_labels),
+                pl.Series(name="AI_Text_Category_Confidence", values=scores),
+            ]
+        )
+    except (ImportError, Exception) as exc:
+        logger = logging.getLogger("ml_advanced")
+        logger.warning(f"Transformers NLP unavailable, using keyword fallback: {exc}")
+        keyword_map = {cat.lower(): cat for cat in categories}
+        predicted_labels: list[str] = []
+        scores: list[float] = []
+
+        for text in texts:
+            normalized_text = (text or "").lower()
+            if not normalized_text:
+                predicted_labels.append("Unknown")
+                scores.append(0.0)
+                continue
+            matched = None
+            for keyword, category in keyword_map.items():
+                if keyword in normalized_text:
+                    matched = category
+                    break
+            if matched:
+                predicted_labels.append(matched)
+                scores.append(0.7)
+            else:
+                predicted_labels.append(categories[0] if categories else "Unknown")
+                scores.append(0.3)
+
+        return dataframe.with_columns(
+            [
+                pl.Series(name="AI_Text_Category", values=predicted_labels),
+                pl.Series(name="AI_Text_Category_Confidence", values=scores),
+            ]
+        )

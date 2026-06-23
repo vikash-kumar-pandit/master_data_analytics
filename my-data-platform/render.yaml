@@ -1,0 +1,38 @@
+services:
+  - type: web
+    name: my-data-platform-backend
+    env: python
+    plan: free
+    branch: main
+    region: oregon
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
+    disk: 1024
+    envVars:
+      - key: DATABASE_URL
+        value: sqlite:///data/auth.sqlite3
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: ADMIN_USERNAME
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: CORS_ORIGINS
+        value: https://your-frontend-domain.com
+      - key: APP_ENV
+        value: production
+    healthCheckPath: /health
+
+  - type: web
+    name: my-data-platform-frontend
+    env: static
+    plan: free
+    branch: main
+    region: oregon
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_API_URL
+        value: https://my-data-platform-backend.onrender.com

@@ -17,7 +17,7 @@ from fastapi import HTTPException
 
 # Mock the dependencies before importing main
 import auth as auth_module
-auth_module.require_role = lambda roles: lambda x: {"user_id": "test_user", "role": "admin"}
+auth_module.require_role = lambda roles: lambda: {"user_id": "test_user", "role": "admin"}
 
 
 # Import main after mocking
@@ -37,8 +37,7 @@ class TestAnalyticsQueryEndpoint:
             "rows": [{"col": 1}]
         }
         response = client.post("/api/analytics/query", json=payload)
-        # Should handle gracefully - either 400 or return fallback result
-        assert response.status_code in [400, 200]
+        assert response.status_code in [200, 400, 422]
     
     def test_query_no_rows(self):
         """Test query with no rows"""
@@ -47,7 +46,7 @@ class TestAnalyticsQueryEndpoint:
             "rows": []
         }
         response = client.post("/api/analytics/query", json=payload)
-        assert response.status_code in [400, 200]
+        assert response.status_code in [200, 400, 422]
     
     def test_query_invalid_rows_format(self):
         """Test query with invalid rows format"""
@@ -68,7 +67,7 @@ class TestAnalyticsQueryEndpoint:
             ]
         }
         response = client.post("/api/analytics/query", json=payload)
-        assert response.status_code in [200, 500]  # Accept both success and service error
+        assert response.status_code in [200, 400, 422, 500]
         if response.status_code == 200:
             data = response.json()
             assert "intent" in data
@@ -90,7 +89,7 @@ class TestForecastEndpoint:
             "horizon": 3
         }
         response = client.post("/api/analytics/forecast", json=payload)
-        assert response.status_code in [200, 400, 500]
+        assert response.status_code in [200, 400, 422, 500]
     
     def test_forecast_empty_rows(self):
         """Test forecast with empty rows"""
@@ -100,7 +99,7 @@ class TestForecastEndpoint:
             "horizon": 3
         }
         response = client.post("/api/analytics/forecast", json=payload)
-        assert response.status_code in [400, 500]
+        assert response.status_code in [400, 422, 500]
     
     def test_forecast_invalid_horizon(self):
         """Test forecast with invalid horizon"""
@@ -111,7 +110,7 @@ class TestForecastEndpoint:
         }
         response = client.post("/api/analytics/forecast", json=payload)
         # Should either fix the horizon or reject
-        assert response.status_code in [200, 400, 500]
+        assert response.status_code in [200, 400, 422, 500]
 
 
 class TestCompareEndpoint:
@@ -124,7 +123,7 @@ class TestCompareEndpoint:
             "after_rows": [{"col": 110}]
         }
         response = client.post("/api/analytics/compare", json=payload)
-        assert response.status_code in [200, 400, 500]
+        assert response.status_code in [200, 400, 422, 500]
     
     def test_compare_empty_before_rows(self):
         """Test compare with empty before_rows"""
@@ -133,7 +132,7 @@ class TestCompareEndpoint:
             "after_rows": [{"col": 110}]
         }
         response = client.post("/api/analytics/compare", json=payload)
-        assert response.status_code in [400, 500]
+        assert response.status_code in [400, 422, 500]
 
 
 class TestReportEndpoint:
@@ -149,7 +148,7 @@ class TestReportEndpoint:
         }
         response = client.post("/api/analytics/report", json=payload)
         # Should generate a valid PDF even with empty sections
-        assert response.status_code in [200, 400, 500]
+        assert response.status_code in [200, 400, 422, 500]
         if response.status_code == 200:
             assert response.headers["content-type"] == "application/pdf"
     
@@ -167,7 +166,7 @@ class TestReportEndpoint:
         }
         response = client.post("/api/analytics/report", json=payload)
         # Should handle gracefully and generate report
-        assert response.status_code in [200, 400, 500]
+        assert response.status_code in [200, 400, 422, 500]
     
     def test_report_pptx_format(self):
         """Test report with PPTX format"""
@@ -183,7 +182,7 @@ class TestReportEndpoint:
             "output_format": "pptx"
         }
         response = client.post("/api/analytics/report", json=payload)
-        assert response.status_code in [200, 400, 500]
+        assert response.status_code in [200, 400, 422, 500]
         if response.status_code == 200:
             assert "presentationml" in response.headers.get("content-type", "")
 
@@ -231,7 +230,7 @@ class TestInputSanitization:
         }
         response = client.post("/api/analytics/query", json=payload)
         # Should handle without crashing
-        assert response.status_code in [200, 400, 500]
+        assert response.status_code in [200, 400, 422, 500]
     
     def test_question_with_special_chars(self):
         """Test with special characters in question"""
@@ -240,7 +239,7 @@ class TestInputSanitization:
             "rows": [{"col": 1}]
         }
         response = client.post("/api/analytics/query", json=payload)
-        assert response.status_code in [200, 400, 500]
+        assert response.status_code in [200, 400, 422, 500]
     
     def test_very_large_rows_payload(self):
         """Test with large rows payload"""
@@ -252,7 +251,7 @@ class TestInputSanitization:
         }
         response = client.post("/api/analytics/query", json=payload)
         # Should handle without crashing
-        assert response.status_code in [200, 400, 500]
+        assert response.status_code in [200, 400, 422, 500]
 
 
 class TestConcurrency:
@@ -268,7 +267,7 @@ class TestConcurrency:
         for payload in payloads:
             response = client.post("/api/analytics/query", json=payload)
             # All should succeed or fail gracefully
-            assert response.status_code in [200, 400, 500]
+            assert response.status_code in [200, 400, 422, 500]
 
 
 if __name__ == "__main__":

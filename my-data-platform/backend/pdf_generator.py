@@ -5,11 +5,22 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+def _pdf_output_bytes(pdf: FPDF) -> bytes:
+    output = pdf.output()
+    if isinstance(output, bytes):
+        return output
+    if isinstance(output, bytearray):
+        return bytes(output)
+    if isinstance(output, str):
+        return output.encode("latin-1", errors="ignore")
+    return bytes(output)
+
+
 class PDFReport(FPDF):
     def header(self):
         try:
             self.set_font("Helvetica", "B", 16)
-            self.cell(0, 10, "Automated Big Data Analysis Report", align="C", ln=True)
+            self.cell(0, 10, "Automated Big Data Analysis Report", align="C")
             self.ln(5)
         except Exception as e:
             logger.error(f"Error in PDF header: {e}")
@@ -34,7 +45,7 @@ def create_pdf_in_memory(ai_summary: str, dataframe: pl.DataFrame) -> bytes:
 
         try:
             pdf.set_font("Helvetica", "B", 12)
-            pdf.cell(0, 10, "1. Executive AI Summary", ln=True)
+            pdf.cell(0, 10, "1. Executive AI Summary")
             pdf.set_font("Helvetica", size=11)
             # Limit summary length to prevent PDF rendering issues
             safe_summary = str(ai_summary)[:5000]
@@ -42,11 +53,11 @@ def create_pdf_in_memory(ai_summary: str, dataframe: pl.DataFrame) -> bytes:
         except Exception as e:
             logger.error(f"Error adding summary to PDF: {e}")
             pdf.set_font("Helvetica", size=10)
-            pdf.cell(0, 10, f"Summary rendering failed: {str(e)[:100]}", ln=True)
+            pdf.cell(0, 10, f"Summary rendering failed: {str(e)[:100]}")
         
         pdf.ln(6)
         pdf.set_font("Helvetica", "B", 12)
-        pdf.cell(0, 10, "2. Cleaned Data Sample", ln=True)
+        pdf.cell(0, 10, "2. Cleaned Data Sample")
 
         sample_df = dataframe.head(10)
         if sample_df.columns and sample_df.height > 0:
@@ -70,15 +81,12 @@ def create_pdf_in_memory(ai_summary: str, dataframe: pl.DataFrame) -> bytes:
                 except Exception as e:
                     logger.error(f"Error adding table to PDF: {e}")
                     pdf.set_font("Helvetica", size=10)
-                    pdf.cell(0, 10, f"Table rendering failed: {str(e)[:100]}", ln=True)
+                    pdf.cell(0, 10, f"Table rendering failed: {str(e)[:100]}")
         else:
             pdf.set_font("Helvetica", size=10)
-            pdf.cell(0, 8, "No rows available.", ln=True)
+            pdf.cell(0, 8, "No rows available.")
 
-        output = pdf.output(dest="S")
-        if isinstance(output, bytes):
-            return output
-        return output.encode("latin-1")
+        return _pdf_output_bytes(pdf)
     
     except Exception as e:
         # Create minimal fallback PDF on error
@@ -87,9 +95,8 @@ def create_pdf_in_memory(ai_summary: str, dataframe: pl.DataFrame) -> bytes:
             fallback_pdf = PDFReport()
             fallback_pdf.add_page()
             fallback_pdf.set_font("Helvetica", size=11)
-            fallback_pdf.cell(0, 10, f"PDF generation failed: {str(e)[:200]}", ln=True)
-            output = fallback_pdf.output(dest="S")
-            return output if isinstance(output, bytes) else output.encode("latin-1")
+            fallback_pdf.cell(0, 10, f"PDF generation failed: {str(e)[:200]}")
+            return _pdf_output_bytes(fallback_pdf)
         except Exception as fallback_error:
             logger.exception(f"Even fallback PDF failed: {fallback_error}")
             # Return minimal valid PDF

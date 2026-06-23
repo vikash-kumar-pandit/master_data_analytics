@@ -110,9 +110,13 @@ class TestAuthEndpoints:
         )
         assert response.status_code == 201
         data = response.json()
-        assert data["verification_required"] is True
-        # In development, token should be exposed for testing
-        assert "verification_token" in data or "verification_required" in data
+        # In dev mode, users are auto-verified (verification_required=False)
+        # In production mode, users must verify email (verification_required=True)
+        assert "verification_required" in data
+        assert "message" in data
+        # In development mode token may be exposed for testing
+        if data["verification_required"]:
+            assert "verification_token" in data or "verification_required" in data
 
     def test_register_weak_password(self):
         """Test registering with weak password."""
@@ -283,6 +287,53 @@ class TestAuthEndpoints:
             },
         )
         assert response.status_code == 201
+
+
+    class TestProfileEndpoints:
+        """Test profile endpoint functionality."""
+
+        def test_get_profile_authenticated(self):
+            """Test getting profile with valid token."""
+            login_response = client.post(
+                "/api/auth/login",
+                data={"username": "admin_user", "password": "password123"},
+            )
+            token = login_response.json()["access_token"]
+
+            response = client.get(
+                "/api/auth/profile",
+                headers={"Authorization": f"Bearer {token}"},
+            )
+            assert response.status_code == 200
+            data = response.json()
+            assert "username" in data
+            assert "email" in data
+            assert "full_name" in data
+
+        def test_update_profile(self):
+            """Test updating profile with valid data."""
+            login_response = client.post(
+                "/api/auth/login",
+                data={"username": "admin_user", "password": "password123"},
+            )
+            token = login_response.json()["access_token"]
+
+            response = client.put(
+                "/api/auth/profile",
+                json={"full_name": "Test User", "bio": "My bio", "phone": "1234567890", "location": "Delhi"},
+                headers={"Authorization": f"Bearer {token}"},
+            )
+            assert response.status_code == 200
+            data = response.json()
+            assert data["full_name"] == "Test User"
+            assert data["bio"] == "My bio"
+            assert data["phone"] == "1234567890"
+            assert data["location"] == "Delhi"
+
+        def test_get_profile_no_token(self):
+            """Test getting profile without token."""
+            response = client.get("/api/auth/profile")
+            assert response.status_code == 403
 
 
 class TestSMTPIntegration:
