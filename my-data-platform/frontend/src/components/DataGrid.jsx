@@ -3,7 +3,7 @@ import { AgGridReact } from 'ag-grid-react';
 import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-alpine.css';
 
-export default function DataGrid({ rowData, columnDefs, onGridReady }) {
+export default function DataGrid({ rowData, columnDefs, onGridReady, theme }) {
   const gridRef = useRef(null);
 
   const defaultColumnDef = useMemo(
@@ -44,7 +44,7 @@ export default function DataGrid({ rowData, columnDefs, onGridReady }) {
         </div>
       ) : null}
 
-      <div className="ag-theme-alpine grid-surface">
+      <div className={`${theme === 'dark' ? 'ag-theme-alpine-dark' : 'ag-theme-alpine'} grid-surface`}>
         <AgGridReact
           ref={gridRef}
           rowData={rowData}

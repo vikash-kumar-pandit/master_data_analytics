@@ -11,6 +11,8 @@ from datetime import datetime, timedelta, timezone
 from email.message import EmailMessage
 from typing import Any
 import pathlib
+import dotenv
+dotenv.load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 
 import jwt
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status, Form

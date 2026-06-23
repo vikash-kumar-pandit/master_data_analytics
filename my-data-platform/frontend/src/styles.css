@@ -2485,3 +2485,1099 @@ p {
     flex-direction: column;
   }
 }
+
+
+/* =========================================
+   SKELETON LOADERS
+   ========================================= */
+@keyframes skeleton-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.skeleton-pulse {
+  background: linear-gradient(90deg, var(--bg-card, #1e293b) 25%, var(--bg-soft, #334155) 50%, var(--bg-card, #1e293b) 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s infinite;
+  border-radius: var(--radius-md, 8px);
+}
+
+/* =========================================
+   NAV ICON SVG
+   ========================================= */
+.nav-icon-svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  opacity: 0.8;
+  transition: opacity 0.2s;
+}
+
+.sidebar-btn:hover .nav-icon-svg,
+.sidebar-btn.active .nav-icon-svg {
+  opacity: 1;
+}
+
+/* =========================================
+   SIDEBAR AVATAR
+   ========================================= */
+.sidebar-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #0ea5e9, #a855f7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.875rem;
+  color: white;
+  flex-shrink: 0;
+  letter-spacing: 0;
+}
+
+.sidebar-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line-soft, rgba(125, 157, 191, 0.2));
+  background: transparent;
+}
+
+.sidebar-user-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.sidebar-username {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-main, #0f172a);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Role Badges */
+.role-badge {
+  display: inline-block;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  width: fit-content;
+}
+
+.role-badge--admin {
+  background: rgba(168, 85, 247, 0.15);
+  color: #a855f7;
+  border: 1px solid rgba(168, 85, 247, 0.3);
+}
+
+.role-badge--analyst {
+  background: rgba(14, 165, 233, 0.15);
+  color: #0ea5e9;
+  border: 1px solid rgba(14, 165, 233, 0.3);
+}
+
+.role-badge--viewer {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+/* Sidebar Logo Icon */
+.sidebar-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sidebar-logo-icon {
+  width: 22px;
+  height: 22px;
+  color: #0ea5e9;
+  flex-shrink: 0;
+}
+
+/* Sidebar Action Buttons */
+.sidebar-action-btn {
+  width: 100% !important;
+  justify-content: flex-start !important;
+  margin-bottom: 4px;
+  font-size: 0.8rem !important;
+  padding: 7px 10px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+/* Logout Button */
+.sidebar-logout {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-soft, #64748b);
+  cursor: pointer;
+  transition: color 0.2s, background 0.2s;
+  flex-shrink: 0;
+  margin-top: 0;
+}
+
+.sidebar-logout:hover {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+}
+
+/* =========================================
+   DROPZONE / FILE UPLOAD SYSTEM
+   ========================================= */
+.dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 12px;
+  background: rgba(255, 255, 255, 0.5);
+  border: 1.5px dashed var(--line-strong, #cbd5e1);
+  border-radius: var(--radius-md, 8px);
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  text-align: center;
+  position: relative;
+  min-height: 96px;
+}
+
+.dropzone:hover:not(.dropzone--disabled) {
+  border-color: #0ea5e9;
+  background: rgba(14, 165, 233, 0.04);
+}
+
+.dropzone:focus-visible {
+  outline: 2px solid #0ea5e9;
+  outline-offset: 2px;
+}
+
+.dropzone--active {
+  border-color: #0ea5e9;
+  background: rgba(14, 165, 233, 0.08);
+  transform: scale(0.99);
+}
+
+.dropzone--disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.dropzone__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.dropzone__icon {
+  width: 24px;
+  height: 24px;
+  color: var(--text-soft, #64748b);
+  transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.dropzone:hover .dropzone__icon:not(.dropzone__icon--active) {
+  transform: translateY(-2px);
+  color: #0ea5e9;
+}
+
+.dropzone__icon--active {
+  color: #0ea5e9;
+  animation: bounce 0.5s infinite alternate;
+}
+
+@keyframes bounce {
+  from { transform: translateY(0); }
+  to { transform: translateY(-4px); }
+}
+
+.dropzone__title {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-main, #0f172a);
+}
+
+.dropzone__subtitle {
+  font-size: 0.6875rem;
+  color: var(--text-soft, #64748b);
+}
+
+.dropzone__file-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+}
+
+.dropzone__check-icon {
+  width: 18px;
+  height: 18px;
+  color: #10b981;
+  flex-shrink: 0;
+}
+
+.dropzone__file-details {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dropzone__file-name {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #0ea5e9;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dropzone__file-size {
+  font-size: 0.65rem;
+  color: var(--text-soft, #64748b);
+}
+
+.dropzone__clear {
+  background: transparent;
+  border: none;
+  color: var(--text-soft, #64748b);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.dropzone__clear:hover {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+/* =========================================
+   100/100 UI/UX Theme & Dropdown Overrides
+   ========================================= */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.user-dropdown-panel {
+  position: absolute;
+  bottom: 60px;
+  left: 10px;
+  right: 10px;
+  background: var(--surface-card-strong);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-md);
+  padding: 10px;
+  box-shadow: var(--shadow-soft);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  animation: fadeIn 0.2s ease-out;
+  cursor: default;
+}
+
+.user-dropdown-header {
+  display: flex;
+  flex-direction: column;
+  padding: 4px 6px;
+  text-align: left;
+}
+
+.user-dropdown-header strong {
+  font-size: 0.875rem;
+  color: var(--text-main);
+  word-break: break-all;
+}
+
+.user-dropdown-email {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  word-break: break-all;
+}
+
+.user-dropdown-divider {
+  height: 1px;
+  background: var(--line-soft);
+  margin: 4px 0;
+}
+
+.user-dropdown-item {
+  font-size: 0.8rem;
+  padding: 6px 8px;
+  border-radius: 6px;
+  color: var(--text-main);
+  transition: background 0.2s;
+  text-align: left;
+}
+
+.user-dropdown-item:hover {
+  background: var(--line-soft);
+  cursor: pointer;
+}
+
+.btn-theme-toggle {
+  background: var(--line-soft);
+  border: 1px solid var(--line-strong);
+  color: var(--text-main);
+  border-radius: 4px;
+  font-size: 0.7rem;
+  padding: 2px 6px;
+  cursor: pointer;
+}
+
+/* Onboarding banner styling */
+.onboarding-tour-banner {
+  box-shadow: 0 10px 30px rgba(14, 165, 233, 0.15);
+  background: var(--surface-card-strong) !important;
+  border: 1px solid var(--accent-cyan) !important;
+}
+
+/* Dark theme style overrides */
+[data-theme='dark'] {
+  --text-main: #f8fafc;
+  --text-soft: #cbd5e1;
+  --text-muted: #94a3b8;
+  --surface-base: #020617;
+  --surface-card: rgba(15, 23, 42, 0.85);
+  --surface-card-strong: rgba(30, 41, 59, 0.95);
+  --line-soft: rgba(255, 255, 255, 0.08);
+  --line-strong: rgba(255, 255, 255, 0.16);
+  --shadow-soft: 0 20px 45px rgba(0, 0, 0, 0.5);
+  --shadow-card: 0 10px 25px rgba(0, 0, 0, 0.4);
+  --topbar-eyebrow: #38bdf8;
+}
+
+[data-theme='dark'] body {
+  background:
+    radial-gradient(circle at 8% 8%, rgba(14, 165, 233, 0.1), transparent 40%),
+    radial-gradient(circle at 92% 10%, rgba(13, 148, 136, 0.08), transparent 36%),
+    radial-gradient(circle at 60% 92%, rgba(245, 158, 11, 0.06), transparent 32%),
+    #020617;
+}
+
+[data-theme='dark'] .dashboard-sidebar {
+  background: linear-gradient(180deg, #020617 0%, #0f172a 100%);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+[data-theme='dark'] .dashboard-topbar {
+  background: rgba(15, 23, 42, 0.8);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+[data-theme='dark'] .workspace-hero {
+  background:
+    radial-gradient(circle at 85% 22%, rgba(14, 165, 233, 0.08), transparent 38%),
+    radial-gradient(circle at 20% 80%, rgba(13, 148, 136, 0.06), transparent 35%),
+    rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+[data-theme='dark'] .overview-panel {
+  background: linear-gradient(180deg, #0f172a 0%, #020617 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+[data-theme='dark'] .health-meter-value strong {
+  color: #38bdf8;
+}
+
+[data-theme='dark'] .metric-card {
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+[data-theme='dark'] .metric-card strong {
+  color: #f8fafc;
+}
+
+[data-theme='dark'] .metric-card small {
+  color: #64748b;
+}
+
+[data-theme='dark'] .card {
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: var(--shadow-card);
+}
+
+[data-theme='dark'] .card h2,
+[data-theme='dark'] .card h3 {
+  color: #f8fafc;
+}
+
+[data-theme='dark'] .sidebar-controls select {
+  background: #0f172a;
+  color: #cbd5e1;
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+[data-theme='dark'] .sidebar-btn {
+  background: rgba(15, 23, 42, 0.4);
+  color: #cbd5e1;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme='dark'] .sidebar-logout {
+  background: rgba(15, 23, 42, 0.4);
+  color: #cbd5e1;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme='dark'] .sidebar-user {
+  background: rgba(15, 23, 42, 0.6);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme='dark'] .sidebar-logo {
+  border-bottom-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme='dark'] .processing-bar-value {
+  color: #cbd5e1 !important;
+}
+
+[data-theme='dark'] .activity-item {
+  border-bottom-color: rgba(255, 255, 255, 0.06);
+}
+
+[data-theme='dark'] .activity-item strong {
+  color: #cbd5e1;
+}
+
+[data-theme='dark'] .activity-item span {
+  color: #94a3b8;
+}
+
+[data-theme='dark'] .activity-item small {
+  color: #64748b;
+}
+
+[data-theme='dark'] .catalog-item {
+  border-bottom-color: rgba(255, 255, 255, 0.06);
+}
+
+[data-theme='dark'] .catalog-item strong {
+  color: #cbd5e1;
+}
+
+[data-theme='dark'] .catalog-item span {
+  color: #94a3b8;
+}
+
+[data-theme='dark'] .catalog-item small {
+  color: #64748b;
+}
+
+[data-theme='dark'] .audit-list .error-card {
+  background: rgba(220, 38, 38, 0.1);
+  border-color: rgba(220, 38, 38, 0.2);
+}
+
+[data-theme='dark'] .audit-list .error-card strong {
+  color: #f87171;
+}
+
+[data-theme='dark'] .audit-list .error-card span {
+  color: #fca5a5;
+}
+
+[data-theme='dark'] .audit-list .error-card small {
+  color: #f87171;
+}
+
+[data-theme='dark'] .grid-wrap {
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme='dark'] .grid-toolbar {
+  background: rgba(15, 23, 42, 0.9);
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme='dark'] .grid-toolbar button {
+  background: #1e293b;
+  color: #f8fafc;
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+[data-theme='dark'] .grid-toolbar button:hover {
+  background: #334155;
+}
+
+[data-theme='dark'] .analytics-grid textarea,
+[data-theme='dark'] .analytics-grid select,
+[data-theme='dark'] .analytics-grid input {
+  background: #0f172a;
+  color: #f8fafc;
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+[data-theme='dark'] .analytics-actions .secondary {
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  color: #cbd5e1;
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+[data-theme='dark'] .automl-panel {
+  background: rgba(15, 23, 42, 0.5);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme='dark'] .automl-panel h3 {
+  color: #f8fafc;
+}
+
+/* =========================================
+   👑 MODERN PREMIUM AESTHETICS UPGRADE
+   ========================================= */
+:root {
+  --radius-lg: 24px;
+  --radius-md: 16px;
+  --radius-sm: 12px;
+}
+
+/* Glassmorphism & Borders */
+.card, 
+.metric-card,
+.workspace-hero,
+.overview-panel,
+.user-dropdown-panel,
+.shortcuts-modal-content,
+.onboarding-tour-banner {
+  backdrop-filter: blur(16px) saturate(120%) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(120%) !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Buttons upgrade */
+.btn, 
+.sidebar-btn,
+.sidebar-logout,
+.export-btn,
+.login-submit,
+.demo-role-row button {
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  border-radius: 12px !important;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  cursor: pointer;
+}
+
+.btn:hover, 
+.sidebar-btn:hover,
+.export-btn:hover,
+.login-submit:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(14, 165, 233, 0.2);
+}
+
+.btn:active, 
+.sidebar-btn:active,
+.export-btn:active,
+.login-submit:active {
+  transform: translateY(0);
+}
+
+/* Sidebar Hover Glow strip */
+.sidebar-btn {
+  position: relative;
+  overflow: hidden;
+}
+
+.sidebar-btn::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 15%;
+  height: 70%;
+  width: 3px;
+  background: var(--accent-cyan);
+  opacity: 0;
+  transition: opacity 0.2s;
+  border-radius: 0 4px 4px 0;
+}
+
+.sidebar-btn.active::after {
+  opacity: 1;
+}
+
+/* Sidebar navigation icon glow */
+.sidebar-btn.active .nav-icon-svg {
+  filter: drop-shadow(0 0 6px rgba(255,255,255,0.8));
+}
+
+/* Metrics and Cards Hover */
+.metric-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--accent-cyan);
+  box-shadow: var(--shadow-soft);
+}
+
+/* Custom Scrollbar for premium look */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.2);
+  border-radius: 99px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.4);
+}
+
+/* =========================================
+   ✨ PREMIUM LOGIN & REGISTER PAGE AESTHETICS
+   ========================================= */
+.login-page {
+  background: 
+    radial-gradient(circle at 10% 10%, rgba(14, 165, 233, 0.12), transparent 45%),
+    radial-gradient(circle at 90% 80%, rgba(168, 85, 247, 0.1), transparent 45%),
+    #020617;
+  color: #f8fafc;
+  animation: auroraDrift 25s ease infinite alternate;
+}
+
+.login-shell {
+  gap: 32px;
+}
+
+.login-hero {
+  background: rgba(15, 23, 42, 0.45) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: #f8fafc !important;
+  padding: 40px !important;
+}
+
+.login-kicker {
+  color: #38bdf8 !important;
+  font-weight: 700;
+  font-size: 0.8rem;
+}
+
+.login-hero h1 {
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  background: linear-gradient(135deg, #f8fafc 0%, #cbd5e1 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.login-hero ul {
+  color: #94a3b8 !important;
+}
+
+.login-card {
+  background: rgba(15, 23, 42, 0.6) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  padding: 32px !important;
+  color: #f8fafc;
+}
+
+.login-card h2 {
+  font-size: 1.6rem;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  color: #f8fafc;
+}
+
+.login-card p {
+  color: #94a3b8 !important;
+  font-size: 0.875rem;
+  margin-bottom: 8px;
+}
+
+.login-card label {
+  color: #cbd5e1 !important;
+  font-size: 0.825rem;
+  font-weight: 600;
+  margin-top: 6px;
+}
+
+.login-card input,
+.login-card select {
+  background: rgba(15, 23, 42, 0.5) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  color: #f8fafc !important;
+  padding: 11px 14px !important;
+  border-radius: 12px !important;
+  font-size: 0.9rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.login-card input:focus,
+.login-card select:focus {
+  border-color: #0ea5e9 !important;
+  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.2) !important;
+  background: rgba(15, 23, 42, 0.7) !important;
+  outline: none;
+}
+
+.demo-role-row button {
+  background: rgba(30, 41, 59, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #cbd5e1;
+  font-size: 0.75rem;
+}
+
+.demo-role-row button:hover {
+  background: rgba(51, 65, 85, 0.8);
+  color: #f8fafc;
+}
+
+.demo-role-row button.active {
+  background: linear-gradient(135deg, #0ea5e9 0%, #a855f7 100%) !important;
+  color: #fff;
+  border: none;
+  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3) !important;
+}
+
+.login-submit {
+  background: linear-gradient(135deg, #0ea5e9 0%, #a855f7 100%) !important;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.95rem;
+  margin-top: 14px;
+  box-shadow: 0 4px 14px rgba(168, 85, 247, 0.25);
+}
+
+.login-submit:hover {
+  box-shadow: 0 6px 20px rgba(168, 85, 247, 0.4) !important;
+}
+
+.success {
+  background: rgba(16, 185, 129, 0.08) !important;
+  border: 1px solid rgba(16, 185, 129, 0.25) !important;
+  color: #34d399 !important;
+}
+
+.error {
+  background: rgba(239, 68, 68, 0.08) !important;
+  border: 1px solid rgba(239, 68, 68, 0.25) !important;
+  color: #fca5a5 !important;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 0.86rem;
+}
+
+/* =========================================
+   👑 CYBER OBSIDIAN (2035 EDITION) THEME
+   ========================================= */
+@keyframes nebulaDrift {
+  0% {
+    background-position: 0% 0%, 100% 50%, 0% 100%, 0% 0%;
+  }
+  50% {
+    background-position: 50% 100%, 0% 0%, 100% 50%, 0% 0%;
+  }
+  100% {
+    background-position: 0% 0%, 100% 50%, 0% 100%, 0% 0%;
+  }
+}
+
+@keyframes laserSweep {
+  0% {
+    transform: translateX(-100%) skewX(-15deg);
+  }
+  50% {
+    transform: translateX(200%) skewX(-15deg);
+  }
+  100% {
+    transform: translateX(200%) skewX(-15deg);
+  }
+}
+
+@keyframes cyberPulse {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(0, 240, 255, 0.15), inset 0 0 5px rgba(0, 240, 255, 0.05);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(0, 240, 255, 0.35), inset 0 0 12px rgba(0, 240, 255, 0.15);
+  }
+}
+
+@keyframes neonBorderSweep {
+  0% {
+    border-color: rgba(0, 240, 255, 0.15);
+  }
+  50% {
+    border-color: rgba(189, 0, 255, 0.3);
+  }
+  100% {
+    border-color: rgba(0, 240, 255, 0.15);
+  }
+}
+
+/* 2035 Theme Override variables */
+[data-theme='dark'] {
+  --text-main: #f3f4f6;       /* Ice white */
+  --text-soft: #9ca3af;       /* Cool grey */
+  --text-muted: #6b7280;      /* Dark grey */
+  --surface-base: #030712;    /* Pure space obsidian */
+  --surface-card: rgba(5, 8, 22, 0.72);   /* Holographic cockpit screen */
+  --surface-card-strong: rgba(3, 5, 12, 0.92);
+  --line-soft: rgba(0, 240, 255, 0.08);   /* Neon cyan soft border */
+  --line-strong: rgba(189, 0, 255, 0.15); /* Cyber purple strong border */
+  --shadow-soft: 0 25px 60px rgba(0, 0, 0, 0.75);
+  --shadow-card: 0 12px 35px rgba(0, 0, 0, 0.6);
+  --accent-cyan: #00f0ff;     /* Laser Cyan */
+  --accent-teal: #00ffcc;
+  --accent-blue: #bd00ff;     /* Cyber Magenta */
+  --topbar-eyebrow: #00f0ff;
+}
+
+[data-theme='dark'] body {
+  background:
+    radial-gradient(circle at 10% 20%, rgba(0, 240, 255, 0.08), transparent 45%),
+    radial-gradient(circle at 90% 15%, rgba(189, 0, 255, 0.06), transparent 45%),
+    radial-gradient(circle at 50% 85%, rgba(0, 255, 204, 0.04), transparent 40%),
+    #030712;
+  background-size: 150% 150%, 150% 150%, 150% 150%, auto;
+  animation: nebulaDrift 30s ease-in-out infinite;
+}
+
+/* Sci-fi Cockpit Sidebar styling */
+[data-theme='dark'] .dashboard-sidebar {
+  background: linear-gradient(180deg, #03050c 0%, #050816 60%, #020308 100%);
+  border-right: 1px solid rgba(0, 240, 255, 0.15) !important;
+  box-shadow: 10px 0 30px rgba(0, 0, 0, 0.6);
+}
+
+/* Cockpit User Card with custom neon pulse */
+[data-theme='dark'] .sidebar-user {
+  background: rgba(3, 5, 12, 0.75) !important;
+  border: 1px solid rgba(0, 240, 255, 0.2) !important;
+  animation: cyberPulse 4s infinite alternate;
+  box-shadow: 0 0 12px rgba(0, 240, 255, 0.1);
+}
+
+[data-theme='dark'] .sidebar-avatar {
+  background: linear-gradient(135deg, #00f0ff, #bd00ff) !important;
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.4);
+}
+
+[data-theme='dark'] .sidebar-username {
+  color: #f3f4f6;
+  font-family: var(--font-primary);
+  text-shadow: 0 0 4px rgba(255,255,255,0.2);
+}
+
+/* Holographic Card styles */
+[data-theme='dark'] .card,
+[data-theme='dark'] .metric-card,
+[data-theme='dark'] .workspace-hero,
+[data-theme='dark'] .overview-panel,
+[data-theme='dark'] .user-dropdown-panel,
+[data-theme='dark'] .shortcuts-modal-content,
+[data-theme='dark'] .onboarding-tour-banner {
+  background: rgba(5, 8, 22, 0.65) !important;
+  border: 1px solid rgba(0, 240, 255, 0.12) !important;
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.6), inset 0 0 15px rgba(0, 240, 255, 0.03);
+  animation: neonBorderSweep 8s infinite alternate;
+}
+
+/* Card Tilt & 3D Lift-Off effect */
+[data-theme='dark'] .metric-card:hover {
+  transform: translateY(-4px) scale(1.02);
+  border-color: #00f0ff !important;
+  box-shadow: 0 20px 45px rgba(0, 240, 255, 0.15), 0 0 10px rgba(0, 240, 255, 0.1);
+}
+
+[data-theme='dark'] .card:hover {
+  border-color: rgba(189, 0, 255, 0.3) !important;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.7), 0 0 15px rgba(189, 0, 255, 0.08);
+}
+
+/* Holographic dynamic breadcrumbs */
+[data-theme='dark'] .topbar-breadcrumbs span {
+  text-shadow: 0 0 8px rgba(0, 240, 255, 0.3);
+}
+
+/* Cyber select elements & inputs */
+[data-theme='dark'] .sidebar-controls select,
+[data-theme='dark'] .sidebar-controls input,
+[data-theme='dark'] .analytics-grid textarea,
+[data-theme='dark'] .analytics-grid select,
+[data-theme='dark'] .analytics-grid input {
+  background: rgba(3, 5, 12, 0.8) !important;
+  border: 1px solid rgba(0, 240, 255, 0.2) !important;
+  color: #00f0ff !important;
+  font-family: var(--font-primary);
+  transition: all 0.3s;
+}
+
+[data-theme='dark'] .sidebar-controls select:focus,
+[data-theme='dark'] .sidebar-controls input:focus,
+[data-theme='dark'] .analytics-grid textarea:focus,
+[data-theme='dark'] .analytics-grid input:focus {
+  border-color: #bd00ff !important;
+  box-shadow: 0 0 12px rgba(189, 0, 255, 0.35) !important;
+}
+
+/* Primary Button Laser Sheen Sweep */
+.btn-primary, 
+.login-submit,
+.export-btn {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #00f0ff 0%, #bd00ff 100%) !important;
+  border: none !important;
+  box-shadow: 0 0 15px rgba(0, 240, 255, 0.35);
+  color: #ffffff !important;
+}
+
+.btn-primary::before, 
+.login-submit::before,
+.export-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -50%;
+  width: 30%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+  transform: skewX(-20deg);
+  pointer-events: none;
+}
+
+.btn-primary:hover::before,
+.login-submit:hover::before,
+.export-btn:hover::before {
+  animation: laserSweep 1.6s ease infinite;
+}
+
+.btn-primary:hover,
+.login-submit:hover,
+.export-btn:hover {
+  box-shadow: 0 0 25px rgba(189, 0, 255, 0.5), 0 0 10px rgba(0, 240, 255, 0.3) !important;
+}
+
+/* Laser styling for sidebar controls buttons */
+.sidebar-action-btn {
+  background: rgba(3, 5, 12, 0.6) !important;
+  border: 1px solid rgba(0, 240, 255, 0.2) !important;
+  color: #cbd5e1 !important;
+}
+
+.sidebar-action-btn:hover {
+  border-color: #00f0ff !important;
+  color: #00f0ff !important;
+  background: rgba(0, 240, 255, 0.08) !important;
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.25) !important;
+}
+
+/* Audit list styling */
+[data-theme='dark'] .audit-list .error-card {
+  background: rgba(239, 68, 68, 0.06) !important;
+  border: 1px solid rgba(239, 68, 68, 0.25) !important;
+  transition: all 0.25s;
+}
+
+[data-theme='dark'] .audit-list .error-card:hover {
+  background: rgba(239, 68, 68, 0.12) !important;
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 15px rgba(239, 68, 68, 0.25) !important;
+  transform: translateX(4px);
+}
+
+/* Futuristic Data Grid Styling */
+[data-theme='dark'] .ag-theme-alpine-dark.grid-surface {
+  --ag-background-color: rgba(5, 8, 22, 0.7);
+  --ag-header-background-color: rgba(3, 5, 12, 0.85);
+  --ag-odd-row-background-color: rgba(255, 255, 255, 0.01);
+  --ag-header-foreground-color: #00f0ff;
+  --ag-foreground-color: #e5e7eb;
+  --ag-border-color: rgba(0, 240, 255, 0.12);
+  --ag-row-hover-color: rgba(0, 240, 255, 0.06);
+  --ag-selected-row-background-color: rgba(189, 0, 255, 0.12);
+}
+
+[data-theme='dark'] .ag-header-cell-label {
+  text-shadow: 0 0 4px rgba(0, 240, 255, 0.3);
+  font-weight: 700;
+}
+
+/* Onboarding banner glow pulse */
+[data-theme='dark'] .onboarding-tour-banner {
+  border: 1px solid #00f0ff !important;
+  box-shadow: 0 0 20px rgba(0, 240, 255, 0.2) !important;
+}
+
+/* =========================================
+   🌌 PREMIUM SCI-FI LOGIN PORTAL DESIGN
+   ========================================= */
+.login-page {
+  background: 
+    radial-gradient(circle at 10% 15%, rgba(0, 240, 255, 0.15), transparent 45%),
+    radial-gradient(circle at 90% 80%, rgba(189, 0, 255, 0.12), transparent 45%),
+    #03050c !important;
+  animation: nebulaDrift 28s ease-in-out infinite;
+}
+
+.login-hero {
+  background: rgba(3, 5, 12, 0.55) !important;
+  border: 1px solid rgba(0, 240, 255, 0.2) !important;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8), 0 0 20px rgba(0, 240, 255, 0.05) !important;
+}
+
+.login-card {
+  background: rgba(3, 5, 12, 0.72) !important;
+  border: 1px solid rgba(189, 0, 255, 0.22) !important;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8), 0 0 25px rgba(189, 0, 255, 0.05) !important;
+}
+
+.login-kicker {
+  color: #00f0ff !important;
+  text-shadow: 0 0 8px rgba(0, 240, 255, 0.4);
+}
+
+.login-hero h1 {
+  background: linear-gradient(135deg, #ffffff 0%, #00f0ff 100%) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  text-shadow: 0 0 10px rgba(0, 240, 255, 0.1);
+}
+
+.login-card h2 {
+  background: linear-gradient(135deg, #ffffff 0%, #bd00ff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.login-card input:focus,
+.login-card select:focus {
+  border-color: #bd00ff !important;
+  box-shadow: 0 0 15px rgba(189, 0, 255, 0.4) !important;
+  background: rgba(3, 5, 12, 0.85) !important;
+}

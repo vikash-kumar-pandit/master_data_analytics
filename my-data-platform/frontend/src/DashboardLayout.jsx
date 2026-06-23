@@ -1,5 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import axios from 'axios';
+import {
+  LayoutDashboard, Wand2, MessageSquare, BarChart3,
+  Search, ShieldCheck, Bot, GitBranch, ClipboardList,
+  FileBarChart2, User, LogOut, Upload, Sparkles,
+  Database, AlertCircle, ChevronRight, Bell, Sun, Moon, HelpCircle, Keyboard
+} from 'lucide-react';
+import DropZone from './components/DropZone';
 import DataGrid from './components/DataGrid';
 import AutoMLWidget from './components/AutoMLWidget';
 import AIEngineWidget from './components/AIEngineWidget';
@@ -45,6 +52,23 @@ export default function DashboardLayout() {
   const [error, setError] = useState('');
   const gridApiRef = useRef(null);
 
+  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
+  const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const [showShortcutsModal, setShowShortcutsModal] = useState(false);
+  const [showOnboardingTour, setShowOnboardingTour] = useState(() => {
+    return !localStorage.getItem('hasSeenTour');
+  });
+  const [tourStep, setTourStep] = useState(1);
+
+  const [profileData, setProfileData] = useState(null);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [editFullName, setEditFullName] = useState('');
+  const [editBio, setEditBio] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [editLocation, setEditLocation] = useState('');
+  const [uploadedAvatar, setUploadedAvatar] = useState(null);
+  const fileInputRef = useRef(null);
+
   const loadCatalog = async () => {
     setCatalogLoading(true);
     try {
@@ -89,6 +113,179 @@ export default function DashboardLayout() {
     }
   };
 
+  const loadProfile = async () => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/api/auth/profile`);
+      const data = response.data;
+      setProfileData(data);
+      setEditFullName(data.full_name || '');
+      setEditBio(data.bio || '');
+      setEditPhone(data.phone || '');
+      setEditLocation(data.location || '');
+      setUploadedAvatar(data.avatar_url || null);
+    } catch (profileError) {
+      // Not created yet or fallback
+    }
+  };
+
+  const handleSaveProfile = async (e) => {
+    e.preventDefault();
+    try {
+      const payload = {
+        full_name: editFullName,
+        bio: editBio,
+        phone: editPhone,
+        location: editLocation,
+        avatar_url: uploadedAvatar
+      };
+      const response = await axios.put(`${API_BASE_URL}/api/auth/profile`, payload);
+      setProfileData(response.data);
+      setShowProfileModal(false);
+    } catch (saveError) {
+      setError(saveError?.response?.data?.detail || "Failed to save profile.");
+    }
+  };
+
+  const handleAvatarChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.size > 1024 * 1024) {
+      alert("Image size should be less than 1MB");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setUploadedAvatar(reader.result);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+  };
+
+  const dismissTour = () => {
+    setShowOnboardingTour(false);
+    localStorage.setItem('hasSeenTour', 'true');
+  };
+
+  const getBreadcrumbs = () => {
+    const base = 'Console';
+    let path = [];
+    switch (activeTab) {
+      case 'overview':
+        path = ['Workspace', 'Data Workspace'];
+        break;
+      case 'cleaning':
+        path = ['Analytics', 'Auto-Clean'];
+        break;
+      case 'insights':
+        path = ['Insights', 'Ask & Report'];
+        break;
+      case 'graphs':
+        path = ['Visuals', 'Graph Gallery'];
+        break;
+      case 'search':
+        path = ['Tools', 'Search & Export'];
+        break;
+      case 'quality':
+        path = ['Security', 'Data Quality'];
+        break;
+      case 'predict':
+        path = ['Intelligence', 'AI Predictions'];
+        break;
+      case 'workflow':
+        path = ['Workflows', 'Builder'];
+        break;
+      case 'audit-log':
+        path = ['Admin', 'Audit Log'];
+        break;
+      default:
+        path = ['Workspace'];
+    }
+    return [base, ...path];
+  };
+
+  useEffect(() => {
+    let keyBuffer = '';
+    let bufferTimeout;
+
+    const handleKeyDown = (event) => {
+      const activeEl = document.activeElement;
+      if (
+        activeEl &&
+        (activeEl.tagName === 'INPUT' ||
+          activeEl.tagName === 'TEXTAREA' ||
+          activeEl.tagName === 'SELECT' ||
+          activeEl.isContentEditable)
+      ) {
+        return;
+      }
+
+      if (event.key === 'Escape') {
+        setShowShortcutsModal(false);
+        setShowUserDropdown(false);
+        return;
+      }
+
+      if (event.key === '?' || event.key === '/') {
+        if (event.key === '?' || (event.key === '/' && event.shiftKey)) {
+          event.preventDefault();
+          setShowShortcutsModal((prev) => !prev);
+          return;
+        }
+      }
+
+      keyBuffer += event.key.toLowerCase();
+      clearTimeout(bufferTimeout);
+      bufferTimeout = setTimeout(() => {
+        keyBuffer = '';
+      }, 1000);
+
+      if (keyBuffer === 'go') {
+        setActiveTab('overview');
+        keyBuffer = '';
+      } else if (keyBuffer === 'gc') {
+        if (canAnalyze) setActiveTab('cleaning');
+        keyBuffer = '';
+      } else if (keyBuffer === 'gr') {
+        setActiveTab('insights');
+        keyBuffer = '';
+      } else if (keyBuffer === 'gg') {
+        setActiveTab('graphs');
+        keyBuffer = '';
+      } else if (keyBuffer === 'gs') {
+        setActiveTab('search');
+        keyBuffer = '';
+      } else if (keyBuffer === 'gq') {
+        setActiveTab('quality');
+        keyBuffer = '';
+      } else if (keyBuffer === 'gp') {
+        if (canAnalyze) setActiveTab('predict');
+        keyBuffer = '';
+      } else if (keyBuffer === 'gw') {
+        if (canAnalyze) setActiveTab('workflow');
+        keyBuffer = '';
+      } else if (keyBuffer === 'gl') {
+        if (user?.role === 'admin') setActiveTab('audit-log');
+        keyBuffer = '';
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      clearTimeout(bufferTimeout);
+    };
+  }, [canAnalyze, user?.role]);
+
   useEffect(() => {
     if (!canAnalyze && activeTab !== 'overview') {
       setActiveTab('overview');
@@ -97,6 +294,7 @@ export default function DashboardLayout() {
 
   useEffect(() => {
     loadDashboardSummary();
+    loadProfile();
   }, []);
 
   useEffect(() => {
@@ -780,25 +978,69 @@ export default function DashboardLayout() {
     <div className="dashboard-shell">
       <aside className="dashboard-sidebar">
         <div className="sidebar-logo">
+          <Database className="sidebar-logo-icon" />
           <strong>DataSaaS Pro</strong>
         </div>
 
-        <div className="sidebar-user">
-          <span>{user?.username || 'user'}</span>
-          <small>Role: {user?.role || 'viewer'}</small>
-          <button type="button" className="sidebar-logout" onClick={logout}>
-            Logout
+        <div className="sidebar-user" onClick={() => setShowUserDropdown((prev) => !prev)} style={{ cursor: 'pointer', position: 'relative' }}>
+          <div className="sidebar-avatar" style={{ overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {profileData?.avatar_url ? (
+              <img src={profileData.avatar_url} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : (
+              <span>{(profileData?.full_name || user?.username || 'U')[0].toUpperCase()}</span>
+            )}
+          </div>
+          <div className="sidebar-user-info">
+            <span className="sidebar-username">{profileData?.full_name || user?.username || 'user'}</span>
+            <span className={`role-badge role-badge--${user?.role || 'viewer'}`}>{user?.role || 'viewer'}</span>
+          </div>
+          <button type="button" className="sidebar-logout" onClick={(e) => { e.stopPropagation(); logout(); }} aria-label="Logout" title="Logout">
+            <LogOut className="w-4 h-4" />
           </button>
+
+          {showUserDropdown && (
+            <div className="user-dropdown-panel glass-effect" onClick={(e) => e.stopPropagation()}>
+              <div className="user-dropdown-header">
+                <strong>{profileData?.full_name || user?.username}</strong>
+                <span className="user-dropdown-email">{user?.email || 'No email registered'}</span>
+              </div>
+              <div className="user-dropdown-divider" />
+              <div className="user-dropdown-item" onClick={() => { setShowProfileModal(true); setShowUserDropdown(false); }}>
+                <span>Edit Profile</span>
+              </div>
+              <div className="user-dropdown-item theme-switch-row" onClick={toggleTheme} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>Theme</span>
+                <span style={{ fontSize: '0.8rem', opacity: 0.8, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  {theme === 'dark' ? <Moon className="w-3.5 h-3.5" /> : <Sun className="w-3.5 h-3.5" />}
+                  {theme === 'dark' ? 'Dark' : 'Light'}
+                </span>
+              </div>
+              <div className="user-dropdown-item" onClick={() => { setShowShortcutsModal(true); setShowUserDropdown(false); }} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>Shortcuts</span>
+                <kbd style={{ background: 'var(--line-strong)', padding: '2px 6px', borderRadius: '4px', fontSize: '0.7rem' }}>?</kbd>
+              </div>
+              <div className="user-dropdown-item" onClick={() => { setShowOnboardingTour(true); setTourStep(1); setShowUserDropdown(false); }}>
+                <span>Quick Tour</span>
+              </div>
+              <div className="user-dropdown-divider" />
+              <button type="button" className="user-dropdown-logout-btn" onClick={logout} style={{ width: '100%', background: 'transparent', border: 'none', color: '#ef4444', textAlign: 'left', padding: '6px 8px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                <LogOut className="w-3.5 h-3.5" />
+                Log Out
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="sidebar-nav">
           <button
             type="button"
+            aria-current={activeTab === 'overview' ? 'page' : undefined}
+            aria-label="Data Workspace"
             className={activeTab === 'overview' ? 'sidebar-btn active' : 'sidebar-btn'}
             onClick={() => setActiveTab('overview')}
           >
             <span className="nav-item-content">
-              <span className="nav-icon">WS</span>
+              <LayoutDashboard className="nav-icon-svg" />
               Data Workspace
             </span>
           </button>
@@ -806,11 +1048,13 @@ export default function DashboardLayout() {
           {canAnalyze ? (
             <button
               type="button"
+              aria-current={activeTab === 'cleaning' ? 'page' : undefined}
+              aria-label="Auto-Clean"
               className={activeTab === 'cleaning' ? 'sidebar-btn active' : 'sidebar-btn'}
               onClick={() => setActiveTab('cleaning')}
             >
               <span className="nav-item-content">
-                <span className="nav-icon">CL</span>
+                <Wand2 className="nav-icon-svg" />
                 Auto-Clean
               </span>
             </button>
@@ -818,44 +1062,52 @@ export default function DashboardLayout() {
 
           <button
             type="button"
+            aria-current={activeTab === 'insights' ? 'page' : undefined}
+            aria-label="Ask & Report"
             className={activeTab === 'insights' ? 'sidebar-btn active' : 'sidebar-btn'}
             onClick={() => setActiveTab('insights')}
           >
             <span className="nav-item-content">
-              <span className="nav-icon">QA</span>
+              <MessageSquare className="nav-icon-svg" />
               Ask & Report
             </span>
           </button>
 
           <button
             type="button"
+            aria-current={activeTab === 'graphs' ? 'page' : undefined}
+            aria-label="Graph Gallery"
             className={activeTab === 'graphs' ? 'sidebar-btn active' : 'sidebar-btn'}
             onClick={() => setActiveTab('graphs')}
           >
             <span className="nav-item-content">
-              <span className="nav-icon">GR</span>
+              <BarChart3 className="nav-icon-svg" />
               Graph Gallery
             </span>
           </button>
 
           <button
             type="button"
+            aria-current={activeTab === 'search' ? 'page' : undefined}
+            aria-label="Search & Export"
             className={activeTab === 'search' ? 'sidebar-btn active' : 'sidebar-btn'}
             onClick={() => setActiveTab('search')}
           >
             <span className="nav-item-content">
-              <span className="nav-icon">SE</span>
+              <Search className="nav-icon-svg" />
               Search & Export
             </span>
           </button>
 
           <button
             type="button"
+            aria-current={activeTab === 'quality' ? 'page' : undefined}
+            aria-label="Data Quality"
             className={activeTab === 'quality' ? 'sidebar-btn active' : 'sidebar-btn'}
             onClick={() => setActiveTab('quality')}
           >
             <span className="nav-item-content">
-              <span className="nav-icon">QA</span>
+              <ShieldCheck className="nav-icon-svg" />
               Data Quality
             </span>
           </button>
@@ -863,11 +1115,13 @@ export default function DashboardLayout() {
           {canAnalyze ? (
             <button
               type="button"
+              aria-current={activeTab === 'predict' ? 'page' : undefined}
+              aria-label="AI Predictions"
               className={activeTab === 'predict' ? 'sidebar-btn active' : 'sidebar-btn'}
               onClick={() => setActiveTab('predict')}
             >
               <span className="nav-item-content">
-                <span className="nav-icon">AI</span>
+                <Bot className="nav-icon-svg" />
                 AI Predictions
               </span>
             </button>
@@ -876,11 +1130,13 @@ export default function DashboardLayout() {
           {canAnalyze ? (
             <button
               type="button"
+              aria-current={activeTab === 'workflow' ? 'page' : undefined}
+              aria-label="Workflow Builder"
               className={activeTab === 'workflow' ? 'sidebar-btn active' : 'sidebar-btn'}
               onClick={() => setActiveTab('workflow')}
             >
               <span className="nav-item-content">
-                <span className="nav-icon">WF</span>
+                <GitBranch className="nav-icon-svg" />
                 Workflow Builder
               </span>
             </button>
@@ -889,11 +1145,13 @@ export default function DashboardLayout() {
           {user?.role === 'admin' ? (
             <button
               type="button"
+              aria-current={activeTab === 'audit-log' ? 'page' : undefined}
+              aria-label="Audit Log"
               className={activeTab === 'audit-log' ? 'sidebar-btn active' : 'sidebar-btn'}
               onClick={() => setActiveTab('audit-log')}
             >
               <span className="nav-item-content">
-                <span className="nav-icon">AL</span>
+                <ClipboardList className="nav-icon-svg" />
                 Audit Log
               </span>
             </button>
@@ -902,35 +1160,35 @@ export default function DashboardLayout() {
 
         <div className="sidebar-controls">
           <label className="input-label">Dataset File</label>
-          <input
-            type="file"
-            accept=".csv,.tsv,.json,.ndjson,.parquet,.xlsx,.xls,text/csv,application/json"
-            onChange={(event) => setFile(event.target.files?.[0] || null)}
-            disabled={!canAnalyze}
-          />
-          {file?.name ? <p className="file-pill">Selected: {file.name}</p> : <p className="file-pill muted">No dataset selected</p>}
+          <DropZone onFile={setFile} file={file} disabled={!canAnalyze || loading} />
 
-          <button type="button" onClick={handleUpload} disabled={loading || !canAnalyze}>
-            {loading ? 'Analyzing...' : 'Upload and Analyze'}
+          <button type="button" className="btn btn-primary btn-sm sidebar-action-btn" onClick={handleUpload} disabled={!canAnalyze || loading}>
+            <Upload className="w-3.5 h-3.5" />
+            {loading ? 'Analyzing...' : 'Upload & Analyze'}
           </button>
-          <button type="button" onClick={handleClean} disabled={loading || !file || !canAnalyze}>
+          <button type="button" className="btn btn-secondary btn-sm sidebar-action-btn" onClick={handleClean} disabled={loading || !file || !canAnalyze}>
+            <Wand2 className="w-3.5 h-3.5" />
             Clean Data
           </button>
-          <button type="button" onClick={handleArrange} disabled={loading || !file || !canAnalyze}>
+          <button type="button" className="btn btn-secondary btn-sm sidebar-action-btn" onClick={handleArrange} disabled={loading || !file || !canAnalyze}>
+            <GitBranch className="w-3.5 h-3.5" />
             Arrange Data
           </button>
           <button
             type="button"
+            className="btn btn-secondary btn-sm sidebar-action-btn"
             onClick={handleBackgroundClean}
             disabled={loading || isBackgroundRunning || !file || !canAnalyze}
           >
-            {isBackgroundRunning ? 'Background Cleaning...' : 'Clean in Background'}
+            <Sparkles className="w-3.5 h-3.5" />
+            {isBackgroundRunning ? 'Running...' : 'BG Clean'}
           </button>
 
           <select
             value={targetColumn}
             onChange={(event) => setTargetColumn(event.target.value)}
             disabled={!targetOptions.length || loading || !canAnalyze}
+            aria-label="Target column for predictions"
           >
             <option value="">Select target column</option>
             {targetOptions.map((option) => (
@@ -942,6 +1200,7 @@ export default function DashboardLayout() {
 
           <button
             type="button"
+            className="btn btn-ghost btn-sm sidebar-action-btn"
             onClick={() =>
               getAIInsights({
                 analysis,
@@ -953,7 +1212,8 @@ export default function DashboardLayout() {
             }
             disabled={aiLoading || loading || !analysis}
           >
-            {aiLoading ? 'Generating Insights...' : 'Generate Business Insights'}
+            <Bot className="w-3.5 h-3.5" />
+            {aiLoading ? 'Generating...' : 'AI Insights'}
           </button>
 
           {!canAnalyze ? <p className="sidebar-note">Viewer role has read-only access.</p> : null}
@@ -969,12 +1229,41 @@ export default function DashboardLayout() {
       <section className="dashboard-main">
         <header className="dashboard-topbar">
           <div className="topbar-copy">
-            <span className="topbar-eyebrow">Admin Console</span>
+            <div className="topbar-breadcrumbs" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>
+              {getBreadcrumbs().map((crumb, idx) => (
+                <React.Fragment key={crumb}>
+                  {idx > 0 && <span style={{ opacity: 0.5 }}>/</span>}
+                  <span style={{ color: idx === getBreadcrumbs().length - 1 ? 'var(--topbar-eyebrow, #0369a1)' : 'inherit' }}>
+                    {crumb}
+                  </span>
+                </React.Fragment>
+              ))}
+            </div>
             <h2>{activeTitle}</h2>
             <p>{activeSubtitle}</p>
           </div>
 
           <div className="topbar-status">
+            <button
+              type="button"
+              aria-label="Quick Tour"
+              title="Quick Tour"
+              onClick={() => { setShowOnboardingTour(true); setTourStep(1); }}
+              style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '6px', borderRadius: '8px', display: 'flex', alignItems: 'center', transition: 'color 0.2s' }}
+              onMouseEnter={(e) => e.currentTarget.style.color = 'var(--text-main)'}
+              onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
+            >
+              <HelpCircle className="w-5 h-5" />
+            </button>
+            <button
+              type="button"
+              aria-label="Notifications"
+              style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '6px', borderRadius: '8px', display: 'flex', alignItems: 'center', transition: 'color 0.2s' }}
+              onMouseEnter={(e) => e.currentTarget.style.color = 'var(--text-main)'}
+              onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
+            >
+              <Bell className="w-5 h-5" />
+            </button>
             <span className="topbar-role">{user?.role || 'viewer'}</span>
             {domainData?.domain ? (
               <span className="domain-badge">
@@ -985,6 +1274,39 @@ export default function DashboardLayout() {
         </header>
 
         <div className="dashboard-content">
+          {showOnboardingTour ? (
+            <div className="onboarding-tour-banner glass-effect" style={{ gridColumn: '1 / -1', padding: '20px', borderRadius: '16px', border: '1px solid var(--accent-cyan)', background: 'rgba(14, 165, 233, 0.08)', animation: 'fadeIn 0.3s ease-out', marginBottom: '8px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <span className="role-badge role-badge--analyst" style={{ margin: 0 }}>Step {tourStep} of 4</span>
+                <button type="button" onClick={dismissTour} style={{ background: 'none', border: 'none', fontSize: '1.25rem', color: 'var(--text-soft)', cursor: 'pointer' }} aria-label="Skip tour">×</button>
+              </div>
+              <h4 style={{ margin: '0 0 8px 0', fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-main)' }}>
+                {tourStep === 1 && "👋 Welcome to DataSaaS Pro!"}
+                {tourStep === 2 && "📁 1. Upload Your Dataset"}
+                {tourStep === 3 && "🧹 2. Clean & Profile Data"}
+                {tourStep === 4 && "🤖 3. AI Insights & AutoML Predictions"}
+              </h4>
+              <p style={{ margin: '0 0 16px 0', fontSize: '0.9rem', color: 'var(--text-soft)', lineHeight: 1.6 }}>
+                {tourStep === 1 && "This is your unified data engineering and AI workspace. Let's do a quick 30-second walkthrough to get you familiarized with all the features."}
+                {tourStep === 2 && "Start by dragging & dropping your CSV, Excel, JSON, or Parquet file into the sidebar drop zone, then click 'Upload & Analyze' to run baseline profiling."}
+                {tourStep === 3 && "Click 'Clean Data' or 'Arrange Data' to fix outliers and formats. You can inspect specific structural and value errors in the 'Data Quality' tab."}
+                {tourStep === 4 && "Choose a target column in the sidebar and run predictive model inference, or click 'AI Insights' to ask natural language questions about your data."}
+              </p>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <button type="button" className="btn btn-ghost btn-sm" onClick={dismissTour} style={{ padding: '4px 8px' }}>Skip Tour</button>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  {tourStep > 1 && (
+                    <button type="button" className="btn btn-secondary btn-sm" onClick={() => setTourStep((p) => p - 1)} style={{ padding: '6px 12px' }}>Back</button>
+                  )}
+                  {tourStep < 4 ? (
+                    <button type="button" className="btn btn-primary btn-sm" onClick={() => setTourStep((p) => p + 1)} style={{ padding: '6px 12px' }}>Next</button>
+                  ) : (
+                    <button type="button" className="btn btn-primary btn-sm" onClick={dismissTour} style={{ padding: '6px 12px' }}>Finish</button>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : null}
           <section className="workspace-hero">
             <div className="workspace-hero-copy">
               <span className="workspace-kicker">Fast, no-code analytics for admins and analysts</span>
@@ -1005,7 +1327,21 @@ export default function DashboardLayout() {
             </div>
           </section>
 
-          {error ? <p className="error error-banner">{error}</p> : null}
+          {error ? (
+            <div role="alert" className="error-banner" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 16px', marginBottom: '16px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '12px', color: '#fca5a5', fontSize: '0.875rem' }}>
+              <AlertCircle className="w-4 h-4 flex-shrink-0" style={{ color: '#ef4444' }} />
+              <span>{error}</span>
+              <button type="button" onClick={() => setError('')} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#fca5a5', cursor: 'pointer', padding: '0 4px', fontSize: '1.25rem', lineHeight: '1' }} aria-label="Dismiss error">×</button>
+            </div>
+          ) : null}
+
+          {dashboardLoading && !rows.length ? (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+              {[1, 2, 3, 4].map(i => (
+                <div key={i} className="skeleton-pulse" style={{ height: '100px' }} />
+              ))}
+            </div>
+          ) : null}
 
           {backgroundTaskId ? (
             <div className="task-status">
@@ -1202,8 +1538,20 @@ export default function DashboardLayout() {
 
               <div className="card grid-card">
                 <h2>Raw Data Workspace</h2>
-                {!rows.length ? <p className="card-note">Upload and analyze a dataset to populate the data grid.</p> : null}
-                <DataGrid rowData={rows} columnDefs={columnDefs} onGridReady={handleGridReady} />
+                {!rows.length ? (
+                  <div style={{ textAlign: 'center', padding: '48px 24px', color: 'var(--text-muted)' }}>
+                    <Database style={{ width: '48px', height: '48px', margin: '0 auto 16px', color: 'var(--brand-500)', opacity: 0.6 }} />
+                    <h4 style={{ color: 'var(--text-secondary)', marginBottom: '8px', fontSize: '1.125rem' }}>No Dataset Loaded</h4>
+                    <p style={{ marginBottom: '20px', fontSize: '0.9rem', lineHeight: '1.6' }}>Upload a CSV, Excel, or JSON file from the sidebar to start exploring your data.</p>
+                    <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap', fontSize: '0.8rem', color: 'var(--text-faint)' }}>
+                      <span style={{ padding: '4px 10px', background: 'var(--bg-soft)', borderRadius: '20px', border: '1px solid var(--border-soft)' }}>📄 CSV</span>
+                      <span style={{ padding: '4px 10px', background: 'var(--bg-soft)', borderRadius: '20px', border: '1px solid var(--border-soft)' }}>📊 Excel</span>
+                      <span style={{ padding: '4px 10px', background: 'var(--bg-soft)', borderRadius: '20px', border: '1px solid var(--border-soft)' }}>🗄️ JSON</span>
+                      <span style={{ padding: '4px 10px', background: 'var(--bg-soft)', borderRadius: '20px', border: '1px solid var(--border-soft)' }}>⚡ Parquet</span>
+                    </div>
+                  </div>
+                ) : null}
+                <DataGrid rowData={rows} columnDefs={columnDefs} onGridReady={handleGridReady} theme={theme} />
               </div>
             </>
           ) : null}
@@ -1320,6 +1668,185 @@ export default function DashboardLayout() {
           ) : null}
         </div>
       </section>
+
+      {showShortcutsModal && (
+        <div className="shortcuts-modal-overlay" onClick={() => setShowShortcutsModal(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', display: 'grid', placeItems: 'center', zIndex: 1000, animation: 'fadeIn 0.2s' }}>
+          <div className="shortcuts-modal-content glass-effect" onClick={(e) => e.stopPropagation()} style={{ width: '450px', background: 'var(--surface-card-strong)', border: '1px solid var(--line-strong)', borderRadius: '18px', padding: '24px', boxShadow: 'var(--shadow-soft)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ margin: 0, fontSize: '1.25rem', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-main)' }}>
+                <Keyboard className="w-5 h-5" style={{ color: 'var(--accent-cyan)' }} /> Keyboard Shortcuts
+              </h3>
+              <button type="button" onClick={() => setShowShortcutsModal(false)} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: 'var(--text-soft)' }}>×</button>
+            </div>
+            
+            <div style={{ display: 'grid', gap: '12px', color: 'var(--text-main)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--line-soft)', paddingBottom: '8px' }}>
+                <span>Show Keyboard Shortcuts</span>
+                <kbd style={{ background: 'var(--line-soft)', padding: '2px 6px', borderRadius: '4px', fontSize: '0.8rem', border: '1px solid var(--line-strong)' }}>?</kbd>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--line-soft)', paddingBottom: '8px' }}>
+                <span>Navigate to Workspace</span>
+                <span style={{ display: 'flex', gap: '4px' }}>
+                  <kbd style={{ background: 'var(--line-soft)', padding: '2px 6px', borderRadius: '4px', fontSize: '0.8rem', border: '1px solid var(--line-strong)' }}>g</kbd>
+                  <span>then</span>
+                  <kbd style={{ background: 'var(--line-soft)', padding: '2px 6px', borderRadius: '4px', fontSize: '0.8rem', border: '1px solid var(--line-strong)' }}>o</kbd>
+                </span>
+              </div>
+              {canAnalyze && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--line-soft)', paddingBottom: '8px' }}>
+                  <span>Navigate to Auto-Clean</span>
+                  <span style={{ display: 'flex', gap: '4px' }}>
+                    <kbd style={{ background: 'var(--line-soft)', padding: '2px 6px', borderRadius: '4px', fontSize: '0.8rem', border: '1px solid var(--line-strong)' }}>g</kbd>
+                    <span>then</span>
+                    <kbd style={{ background: 'var(--line-soft)', padding: '2px 6px', borderRadius: '4px', fontSize: '0.8rem', border: '1px solid var(--line-strong)' }}>c</kbd>
+                  </span>
+                </div>
+              )}
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--line-soft)', paddingBottom: '8px' }}>
+                <span>Navigate to Ask & Report</span>
+                <span style={{ display: 'flex', gap: '4px' }}>
+                  <kbd style={{ background: 'var(--line-soft)', padding: '2px 6px', borderRadius: '4px', fontSize: '0.8rem', border: '1px solid var(--line-strong)' }}>g</kbd>
+                  <span>then</span>
+                  <kbd style={{ background: 'var(--line-soft)', padding: '2px 6px', borderRadius: '4px', fontSize: '0.8rem', border: '1px solid var(--line-strong)' }}>r</kbd>
+                </span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--line-soft)', paddingBottom: '8px' }}>
+                <span>Navigate to Graph Gallery</span>
+                <span style={{ display: 'flex', gap: '4px' }}>
+                  <kbd style={{ background: 'var(--line-soft)', padding: '2px 6px', borderRadius: '4px', fontSize: '0.8rem', border: '1px solid var(--line-strong)' }}>g</kbd>
+                  <span>then</span>
+                  <kbd style={{ background: 'var(--line-soft)', padding: '2px 6px', borderRadius: '4px', fontSize: '0.8rem', border: '1px solid var(--line-strong)' }}>g</kbd>
+                </span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--line-soft)', paddingBottom: '8px' }}>
+                <span>Navigate to Search & Export</span>
+                <span style={{ display: 'flex', gap: '4px' }}>
+                  <kbd style={{ background: 'var(--line-soft)', padding: '2px 6px', borderRadius: '4px', fontSize: '0.8rem', border: '1px solid var(--line-strong)' }}>g</kbd>
+                  <span>then</span>
+                  <kbd style={{ background: 'var(--line-soft)', padding: '2px 6px', borderRadius: '4px', fontSize: '0.8rem', border: '1px solid var(--line-strong)' }}>s</kbd>
+                </span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--line-soft)', paddingBottom: '8px' }}>
+                <span>Navigate to Data Quality</span>
+                <span style={{ display: 'flex', gap: '4px' }}>
+                  <kbd style={{ background: 'var(--line-soft)', padding: '2px 6px', borderRadius: '4px', fontSize: '0.8rem', border: '1px solid var(--line-strong)' }}>g</kbd>
+                  <span>then</span>
+                  <kbd style={{ background: 'var(--line-soft)', padding: '2px 6px', borderRadius: '4px', fontSize: '0.8rem', border: '1px solid var(--line-strong)' }}>q</kbd>
+                </span>
+              </div>
+              {canAnalyze && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--line-soft)', paddingBottom: '8px' }}>
+                  <span>Navigate to AI Predictions</span>
+                  <span style={{ display: 'flex', gap: '4px' }}>
+                    <kbd style={{ background: 'var(--line-soft)', padding: '2px 6px', borderRadius: '4px', fontSize: '0.8rem', border: '1px solid var(--line-strong)' }}>g</kbd>
+                    <span>then</span>
+                    <kbd style={{ background: 'var(--line-soft)', padding: '2px 6px', borderRadius: '4px', fontSize: '0.8rem', border: '1px solid var(--line-strong)' }}>p</kbd>
+                  </span>
+                </div>
+              )}
+              {user?.role === 'admin' && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--line-soft)', paddingBottom: '8px' }}>
+                  <span>Navigate to Audit Log</span>
+                  <span style={{ display: 'flex', gap: '4px' }}>
+                    <kbd style={{ background: 'var(--line-soft)', padding: '2px 6px', borderRadius: '4px', fontSize: '0.8rem', border: '1px solid var(--line-strong)' }}>g</kbd>
+                    <span>then</span>
+                    <kbd style={{ background: 'var(--line-soft)', padding: '2px 6px', borderRadius: '4px', fontSize: '0.8rem', border: '1px solid var(--line-strong)' }}>l</kbd>
+                  </span>
+                </div>
+              )}
+              <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '8px' }}>
+                <span>Dismiss Modals / Dropdowns</span>
+                <kbd style={{ background: 'var(--line-soft)', padding: '2px 6px', borderRadius: '4px', fontSize: '0.8rem', border: '1px solid var(--line-strong)' }}>ESC</kbd>
+              </div>
+            </div>
+            
+            <button type="button" className="btn btn-primary" onClick={() => setShowShortcutsModal(false)} style={{ width: '100%', marginTop: '16px', padding: '10px' }}>Got It</button>
+          </div>
+        </div>
+      )}
+
+      {showProfileModal && (
+        <div className="shortcuts-modal-overlay" onClick={() => setShowProfileModal(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', display: 'grid', placeItems: 'center', zIndex: 1000, animation: 'fadeIn 0.2s' }}>
+          <div className="shortcuts-modal-content glass-effect" onClick={(e) => e.stopPropagation()} style={{ width: '480px', background: 'var(--surface-card-strong)', border: '1px solid var(--line-strong)', borderRadius: '18px', padding: '24px', boxShadow: 'var(--shadow-soft)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h3 style={{ margin: 0, fontSize: '1.25rem', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-main)' }}>
+                <User className="w-5 h-5" style={{ color: 'var(--accent-cyan)' }} /> Edit Profile
+              </h3>
+              <button type="button" onClick={() => setShowProfileModal(false)} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: 'var(--text-soft)' }}>×</button>
+            </div>
+
+            <form onSubmit={handleSaveProfile} style={{ display: 'grid', gap: '16px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+                <div className="sidebar-avatar" style={{ width: '80px', height: '80px', borderRadius: '20px', fontSize: '2rem', cursor: 'pointer', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => fileInputRef.current?.click()}>
+                  {uploadedAvatar ? (
+                    <img src={uploadedAvatar} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    <span>{(editFullName || user?.username || 'U')[0].toUpperCase()}</span>
+                  )}
+                  <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0,0,0,0.6)', color: 'white', fontSize: '0.65rem', textAlign: 'center', padding: '4px 0' }}>Upload</div>
+                </div>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleAvatarChange}
+                  accept="image/*"
+                  style={{ display: 'none' }}
+                />
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Click to change photo</span>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '6px' }}>Full Name</label>
+                <input
+                  type="text"
+                  value={editFullName}
+                  onChange={(e) => setEditFullName(e.target.value)}
+                  placeholder="John Doe"
+                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid var(--line-strong)', background: 'var(--surface-base)', color: 'var(--text-main)' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '6px' }}>Bio</label>
+                <textarea
+                  value={editBio}
+                  onChange={(e) => setEditBio(e.target.value)}
+                  placeholder="Tell us about yourself..."
+                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid var(--line-strong)', background: 'var(--surface-base)', color: 'var(--text-main)', minHeight: '80px', resize: 'vertical' }}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '6px' }}>Phone</label>
+                  <input
+                    type="text"
+                    value={editPhone}
+                    onChange={(e) => setEditPhone(e.target.value)}
+                    placeholder="+1 555-0199"
+                    style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid var(--line-strong)', background: 'var(--surface-base)', color: 'var(--text-main)' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '6px' }}>Location</label>
+                  <input
+                    type="text"
+                    value={editLocation}
+                    onChange={(e) => setEditLocation(e.target.value)}
+                    placeholder="San Francisco, CA"
+                    style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid var(--line-strong)', background: 'var(--surface-base)', color: 'var(--text-main)' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyItems: 'flex-end', gap: '8px', marginTop: '12px' }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setShowProfileModal(false)} style={{ marginLeft: 'auto', padding: '10px 16px' }}>Cancel</button>
+                <button type="submit" className="btn btn-primary" style={{ padding: '10px 16px' }}>Save Changes</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -56,23 +56,24 @@ DataStudio 2026 is a full-stack, production-grade big data analytics platform de
 ## 📦 Project Structure
 
 ```
-├── backend/                  # FastAPI server
-│   ├── main.py              # Entry point + routes
-│   ├── auth.py              # JWT authentication logic
-│   └── requirements.txt     # Python dependencies
-├── frontend/                 # React application
-│   ├── src/
-│   │   ├── components/
-│   │   │   ├── dashboard/   # StatCard, Charts, Tables
-│   │   │   └── layout/      # Header, Footer, MainLayout
-│   │   ├── pages/           # Login, Dashboard
-│   │   ├── services/        # API client (Axios)
-│   │   ├── App.tsx          # Root component
-│   │   └── main.tsx         # Entry point
-│   ├── package.json
-│   └── tsconfig.json
-├── terraform/               # GCP infrastructure
-├── docker-compose.yml       # Production deployment
+├── my-data-platform/           # Main application
+│   ├── backend/                # FastAPI server
+│   │   ├── main.py             # Entry point + routes
+│   │   ├── auth.py             # JWT authentication logic
+│   │   └── requirements.txt    # Python dependencies
+│   ├── frontend/               # React application
+│   │   ├── src/
+│   │   │   ├── components/     # UI components
+│   │   │   ├── pages/          # Login, Dashboard
+│   │   │   ├── services/       # API client (Axios)
+│   │   │   ├── App.jsx         # Root component
+│   │   │   └── main.jsx        # Entry point
+│   │   ├── package.json
+│   │   └── vite.config.js
+│   ├── docker-compose.yml      # Local development
+│   └── tests/                  # Backend tests
+├── terraform/                  # GCP infrastructure
+├── .github/workflows/          # CI/CD pipelines
 └── README.md
 ```
 
@@ -88,12 +89,12 @@ DataStudio 2026 is a full-stack, production-grade big data analytics platform de
 ### 1. Clone the repository
 ```bash
 git clone <your-repo-url>
-cd datastudio-2026
+cd big-data-analytics
 ```
 
 ### 2. Backend Setup
 ```bash
-cd backend
+cd my-data-platform/backend
 pip install -r requirements.txt
 python -m uvicorn main:app --reload --port 8000
 ```
@@ -102,7 +103,7 @@ python -m uvicorn main:app --reload --port 8000
 
 ### 3. Frontend Setup
 ```bash
-cd frontend
+cd my-data-platform/frontend
 npm install
 npm run dev
 ```
@@ -136,7 +137,8 @@ curl http://localhost:8000/stats \
 ## 🐳 Docker Deployment
 
 ```bash
-docker-compose -f docker-compose.prod.yml up -d
+cd my-data-platform
+docker-compose up -d
 ```
 
 ---
@@ -144,7 +146,7 @@ docker-compose -f docker-compose.prod.yml up -d
 ## 🧪 Testing
 
 ```bash
-cd backend
+cd my-data-platform/backend
 pytest
 ```
 

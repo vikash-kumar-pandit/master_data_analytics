@@ -1,8 +1,12 @@
 import io
 import os
 import json
+import logging
+import dotenv
+dotenv.load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 import zipfile
 import base64
+from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import FastAPI, UploadFile, File, HTTPException, Body, Form, Depends
@@ -11,11 +15,10 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 import polars as pl
 from celery.result import AsyncResult
-from fastapi.responses import StreamingResponse
 
 from ml_engine import run_automl_stateless
 from report_generator import generate_pdf_in_memory
-from utils import analyze_dataframe, clean_dataframe, generate_cleaning_stats, read_csv_from_bytes
+from utils import analyze_dataframe, generate_cleaning_stats
 from worker import celery_app, async_clean_data, async_run_automl
 from ai_engine import generate_business_insights
 from pdf_generator import create_pdf_in_memory
@@ -36,7 +39,7 @@ from analytics_engine import analyze_question, compare_versions, forecast_metric
 from report_generator import generate_structured_report_pdf, generate_structured_report_pptx
 from share_manager import create_share_link, get_share, increment_view_count, record_download, list_my_shares, revoke_share
 from executive_summary import generate_executive_summary
-from scheduled_exports import create_scheduled_export, get_schedule, list_schedules, update_schedule, record_run, delete_schedule
+from scheduled_exports import create_scheduled_export, get_schedule, list_schedules, delete_schedule
 from data_quality import calculate_data_quality_metrics, get_quality_report
 
 try:
@@ -57,6 +60,7 @@ except Exception:
 
 from contextlib import asynccontextmanager
 
+logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app_context: FastAPI):
@@ -1530,7 +1534,6 @@ async def predict_background(
         logger.warning(f"Background worker unavailable, falling back to sync AutoML: {exc}")
         try:
             file_bytes = base64.b64decode(file_b64)
-            from utils import analyze_dataframe
             from connectors import read_dataset_from_bytes
             dataframe = read_dataset_from_bytes(file_bytes, filename="dataset.csv")
             ml_result = run_automl_stateless(dataframe, target_column)

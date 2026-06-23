@@ -58,19 +58,18 @@ jobs:
 
       - name: Install dependencies
         run: |
-          cd backend
+          cd my-data-platform/backend
           pip install -r requirements.txt
-          pip install -r ../requirements-enhanced.txt
 
       - name: Lint with flake8
         run: |
-          cd backend
+          cd my-data-platform/backend
           flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
           flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
       - name: Type check with mypy
         run: |
-          cd backend
+          cd my-data-platform/backend
           mypy . --ignore-missing-imports || true
 
       - name: Run pytest
@@ -78,13 +77,13 @@ jobs:
           DATABASE_URL: postgresql://test:test@localhost:5432/test_db
           REDIS_URL: redis://localhost:6379
         run: |
-          cd backend
+          cd my-data-platform/backend
           pytest tests/ -v --cov=. --cov-report=xml
 
       - name: Upload coverage
         uses: codecov/codecov-action@v3
         with:
-          files: ./backend/coverage.xml
+          files: ./my-data-platform/backend/coverage.xml
           flags: unittests
           name: codecov-umbrella
 
@@ -118,25 +117,13 @@ jobs:
         run: |
           docker build -t ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.BACKEND_IMAGE }}:${{ github.sha }} \
             -t ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.BACKEND_IMAGE }}:latest \
-            -f backend/Dockerfile \
-            ./backend
+            -f my-data-platform/backend/Dockerfile \
+            my-data-platform/backend
 
       - name: Push backend image
         run: |
           docker push ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.BACKEND_IMAGE }}:${{ github.sha }}
           docker push ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.BACKEND_IMAGE }}:latest
-
-      - name: Build frontend image
-        run: |
-          docker build -t ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.FRONTEND_IMAGE }}:${{ github.sha }} \
-            -t ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.FRONTEND_IMAGE }}:latest \
-            -f frontend/Dockerfile \
-            ./frontend
-
-      - name: Push frontend image
-        run: |
-          docker push ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
-          docker push ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.FRONTEND_IMAGE }}:latest
 
   # Deploy to GCP
   deploy:
@@ -187,7 +174,7 @@ jobs:
 
       - name: Upload frontend to Cloud Storage
         run: |
-          cd frontend
+          cd my-data-platform/frontend
           npm ci
           npm run build
           gsutil -m cp -r dist/* gs://${{ env.PROJECT_ID }}-static/

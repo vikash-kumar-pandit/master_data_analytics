@@ -10127,5 +10127,52 @@
     },
     "cleaning_stats": [],
     "ml_results": {}
+  },
+  {
+    "id": "5972f45c-e518-4652-8d61-71de757661e6",
+    "created_at": "2026-06-23T08:27:59.105066+00:00",
+    "fingerprint": "32dde54e1ba4728dd8122c468eb9cd979f802dce200a6736d1e8ff61d7ace2b9",
+    "dataset_name": "sample.csv",
+    "action": "upload",
+    "source": "file_upload",
+    "target_column": null,
+    "created_by": {
+      "username": "data_analyst",
+      "role": "analyst"
+    },
+    "summary": {
+      "action": "upload",
+      "dataset_name": "sample.csv",
+      "rows": 2,
+      "cols": 2,
+      "domain": "Unknown",
+      "target_column": null,
+      "source": "file_upload",
+      "owner": "data_analyst"
+    },
+    "analysis": {
+      "category": "Generic",
+      "rows": 2,
+      "cols": 2,
+      "column_info": [
+        "name",
+        "value"
+      ],
+      "null_counts": [
+        {
+          "name": 0,
+          "value": 0
+        }
+      ],
+      "audit_errors": [],
+      "domain_info": {
+        "domain": "Unknown",
+        "confidence": 0,
+        "columns": [],
+        "error": "OPENAI_API_KEY is not configured."
+      }
+    },
+    "cleaning_stats": [],
+    "ml_results": {}
   }
 ]
