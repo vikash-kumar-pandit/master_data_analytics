@@ -1,0 +1,342 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+
+/* Root variables for light mode */
+:root {
+  --font-primary: "Plus Jakarta Sans", "Manrope", "Segoe UI", sans-serif;
+  --text-main: #122035;
+  --text-soft: #536074;
+  --text-muted: #708097;
+  --surface-base: #f3f7fb;
+  --surface-card: rgba(255, 255, 255, 0.9);
+  --surface-card-strong: rgba(255, 255, 255, 0.98);
+  --line-soft: rgba(123, 145, 169, 0.24);
+  --line-strong: rgba(123, 145, 169, 0.45);
+  --accent-cyan: #0ea5e9;
+  --accent-teal: #0d9488;
+  --accent-blue: #2563eb;
+  --accent-red: #dc2626;
+  --success: #16a34a;
+  --radius-lg: 20px;
+  --radius-md: 14px;
+  --radius-sm: 10px;
+  --shadow-soft: 0 22px 50px rgba(16, 31, 49, 0.08);
+  --shadow-card: 0 14px 30px rgba(17, 33, 51, 0.08);
+}
+
+/* Root variables for dark mode */
+.dark {
+  --text-main: #f1f5f9;
+  --text-soft: #cbd5e1;
+  --text-muted: #94a3b8;
+  --surface-base: #0f172a;
+  --surface-card: rgba(15, 23, 42, 0.9);
+  --surface-card-strong: rgba(15, 23, 42, 0.98);
+  --line-soft: rgba(203, 213, 225, 0.24);
+  --line-strong: rgba(203, 213, 225, 0.45);
+}
+
+@keyframes auroraDrift {
+  0% {
+    background-position: 0% 0%, 100% 10%, 55% 100%, 0% 0%;
+  }
+  50% {
+    background-position: 8% 6%, 92% 2%, 62% 92%, 0% 0%;
+  }
+  100% {
+    background-position: 0% 0%, 100% 10%, 55% 100%, 0% 0%;
+  }
+}
+
+@keyframes glowPulse {
+  0% {
+    box-shadow: 0 0 0 rgba(14, 165, 233, 0);
+  }
+  50% {
+    box-shadow: 0 0 28px rgba(14, 165, 233, 0.32);
+  }
+  100% {
+    box-shadow: 0 0 0 rgba(14, 165, 233, 0);
+  }
+}
+
+@keyframes riseIn {
+  0% {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes slideInFromLeft {
+  0% {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideInFromRight {
+  0% {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  min-height: 100%;
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-primary);
+  color: var(--text-main);
+  background:
+    radial-gradient(circle at 8% 8%, rgba(14, 165, 233, 0.18), transparent 40%),
+    radial-gradient(circle at 92% 10%, rgba(13, 148, 136, 0.15), transparent 36%),
+    radial-gradient(circle at 60% 92%, rgba(245, 158, 11, 0.12), transparent 32%),
+    var(--surface-base);
+  background-size: 120% 120%, 120% 120%, 120% 120%, auto;
+  background-attachment: fixed;
+  line-height: 1.5;
+  animation: auroraDrift 22s ease-in-out infinite;
+  transition: background-color 0.3s ease;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(123, 145, 169, 0.4);
+  border-radius: 5px;
+  transition: background 0.2s;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(123, 145, 169, 0.6);
+}
+
+.dark::-webkit-scrollbar-thumb {
+  background: rgba(203, 213, 225, 0.3);
+}
+
+.dark::-webkit-scrollbar-thumb:hover {
+  background: rgba(203, 213, 225, 0.5);
+}
+
+/* Utility classes */
+.glass-effect {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.dark .glass-effect {
+  background: rgba(15, 23, 42, 0.95);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.gradient-primary {
+  background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%);
+}
+
+.gradient-accent {
+  background: linear-gradient(135deg, #ec4899 0%, #f43f5e 100%);
+}
+
+.gradient-success {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+}
+
+.text-gradient {
+  background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.animate-aurora {
+  animation: auroraDrift 22s ease-in-out infinite;
+}
+
+.animate-glow-pulse {
+  animation: glowPulse 2s ease-in-out infinite;
+}
+
+.animate-rise-in {
+  animation: riseIn 0.6s ease-out;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.animate-slide-in-left {
+  animation: slideInFromLeft 0.3s ease-out;
+}
+
+.animate-slide-in-right {
+  animation: slideInFromRight 0.3s ease-out;
+}
+
+/* Form styling */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="search"],
+textarea,
+select {
+  transition: all 0.2s ease;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1);
+}
+
+/* Placeholder styling */
+::placeholder {
+  color: var(--text-muted);
+  opacity: 0.7;
+}
+
+/* Selection styling */
+::selection {
+  background: rgba(14, 165, 233, 0.3);
+  color: var(--text-main);
+}
+
+.dark::selection {
+  background: rgba(14, 165, 233, 0.4);
+}
+
+/* Link styling */
+a {
+  color: var(--accent-blue);
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+a:hover {
+  color: var(--accent-cyan);
+  text-decoration: underline;
+}
+
+/* Button base styling */
+button {
+  transition: all 0.2s ease;
+  font-family: var(--font-primary);
+}
+
+button:active {
+  transform: scale(0.98);
+}
+
+/* Headings */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+h1 {
+  font-size: 2.25rem;
+}
+
+h2 {
+  font-size: 1.875rem;
+}
+
+h3 {
+  font-size: 1.5rem;
+}
+
+h4 {
+  font-size: 1.25rem;
+}
+
+h5 {
+  font-size: 1.125rem;
+}
+
+h6 {
+  font-size: 1rem;
+}
+
+/* Accessibility */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Focus visible for accessibility */
+:focus-visible {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: 2px;
+}
+
+/* Animations for UI elements */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Print styles */
+@media print {
+  body {
+    background: white;
+  }
+  
+  .no-print {
+    display: none !important;
+  }
+}
