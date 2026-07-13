@@ -4,3 +4,6 @@ frontend/dist
 __pycache__/
 *.py[cod]
 *.sqlite3
+.agents/
+.gemini/
+backend/storage/uploads/

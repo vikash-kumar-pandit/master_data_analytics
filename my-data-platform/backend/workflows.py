@@ -1,64 +1,70 @@
 from __future__ import annotations
 
-import json
+import uuid
 from datetime import datetime, timezone
-from pathlib import Path
-from threading import Lock
 from typing import Any
-from uuid import uuid4
 
 import polars as pl
 
 from advanced_cleaner import advanced_data_arranging, advanced_data_cleaning
 from catalog import register_catalog_entry
+from database import SessionLocal
 from identifier import identify_dataset_semantics
+from models import WorkflowDefinition
 from ml_advanced import run_nocode_clustering, run_nocode_nlp
 from ml_engine import run_automl_stateless
 from security import sanitize_for_llm
 from utils import analyze_dataframe, generate_cleaning_stats
 from xai_engine import generate_shap_explanations
 
-WORKFLOWS_PATH = Path(__file__).resolve().parent / "data" / "workflows.json"
-WORKFLOWS_PATH.parent.mkdir(parents=True, exist_ok=True)
-WORKFLOW_LOCK = Lock()
-
 ALLOWED_STEPS = ["profile", "arrange", "clean", "automl", "cluster", "nlp", "explain"]
 
 
-def _load_workflows() -> list[dict[str, Any]]:
-    if not WORKFLOWS_PATH.exists():
-        return []
-    try:
-        return json.loads(WORKFLOWS_PATH.read_text(encoding="utf-8"))
-    except Exception:
-        return []
-
-
-def _write_workflows(workflows: list[dict[str, Any]]) -> None:
-    WORKFLOWS_PATH.write_text(json.dumps(workflows, indent=2, default=str), encoding="utf-8")
-
-
 def list_workflows() -> list[dict[str, Any]]:
-    with WORKFLOW_LOCK:
-        workflows = _load_workflows()
-    return list(reversed(workflows))
+    with SessionLocal() as db:
+        workflows = db.query(WorkflowDefinition).order_by(WorkflowDefinition.created_at.desc()).all()
+        return [{
+            "id": wf.id,
+            "name": wf.name,
+            "description": wf.description,
+            "steps": wf.steps,
+            "created_by": wf.created_by,
+            "created_at": wf.created_at.isoformat() if wf.created_at else None
+        } for wf in workflows]
 
 
 def get_workflow(workflow_id: str) -> dict[str, Any] | None:
-    with WORKFLOW_LOCK:
-        workflows = _load_workflows()
-    for workflow in workflows:
-        if workflow.get("id") == workflow_id:
-            return workflow
-    return None
+    with SessionLocal() as db:
+        wf = db.query(WorkflowDefinition).filter(WorkflowDefinition.id == workflow_id).first()
+        if not wf:
+            return None
+        return {
+            "id": wf.id,
+            "name": wf.name,
+            "description": wf.description,
+            "steps": wf.steps,
+            "created_by": wf.created_by,
+            "created_at": wf.created_at.isoformat() if wf.created_at else None
+        }
 
 
-def save_workflow(workflow: dict[str, Any]) -> dict[str, Any]:
-    with WORKFLOW_LOCK:
-        workflows = _load_workflows()
-        workflows.append(workflow)
-        _write_workflows(workflows)
-    return workflow
+def save_workflow(workflow_data: dict):
+    with SessionLocal() as db:
+        wf = db.query(WorkflowDefinition).filter(WorkflowDefinition.id == workflow_data["id"]).first()
+        if not wf:
+            wf = WorkflowDefinition(
+                id=workflow_data["id"],
+                name=workflow_data.get("name"),
+                description=workflow_data.get("description"),
+                steps=workflow_data.get("steps", []),
+                created_by=workflow_data.get("created_by")
+            )
+            db.add(wf)
+        else:
+            wf.name = workflow_data.get("name")
+            wf.description = workflow_data.get("description")
+            wf.steps = workflow_data.get("steps", [])
+        db.commit()
 
 
 def create_workflow_definition(payload: dict[str, Any]) -> dict[str, Any]:
@@ -74,7 +80,7 @@ def create_workflow_definition(payload: dict[str, Any]) -> dict[str, Any]:
         raise ValueError("At least one valid workflow step is required")
 
     workflow = {
-        "id": str(uuid4()),
+        "id": str(uuid.uuid4()),
         "name": name,
         "description": str(payload.get("description") or "").strip(),
         "steps": normalized_steps,

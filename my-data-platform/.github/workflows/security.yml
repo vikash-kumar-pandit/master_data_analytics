@@ -1,0 +1,64 @@
+name: Security Scan
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  schedule:
+    - cron: '0 0 * * 1' # Every Monday at midnight
+
+jobs:
+  python-deps-scan:
+    name: Pip Audit (Backend Dependencies)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Run pip-audit
+        uses: pypa/pip-audit-action@v1.6.2
+        with:
+          inputs: backend/requirements.txt
+          ignore-vulns: |
+            # Add any accepted vulnerabilities here if needed
+
+  container-scan:
+    name: Trivy Container Image Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Build Local Backend Image
+        run: |
+          docker build -t datasaas-backend:test ./backend
+
+      - name: Build Local Nginx Gateway Image
+        run: |
+          docker build -t datasaas-nginx:test -f ./nginx/Dockerfile .
+
+      - name: Scan Backend Image with Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'datasaas-backend:test'
+          format: 'table'
+          exit-code: '0' # Keep 0 during early triage, change to 1 to block on critical CVEs
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Scan Nginx Image with Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'datasaas-nginx:test'
+          format: 'table'
+          exit-code: '0'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'

@@ -372,28 +372,7 @@ async def login(
             detail=f"Too many login attempts. Try again in {LOGIN_WINDOW_MINUTES} minutes",
         )
 
-    user = None
-    import sqlite3
-    try:
-        conn = sqlite3.connect(DB_PATH)
-        conn.row_factory = sqlite3.Row
-        cur = conn.cursor()
-        cur.execute(
-            "SELECT * FROM users WHERE LOWER(username) = LOWER(?) OR LOWER(email) = LOWER(?)",
-            (username, username),
-        )
-        row = cur.fetchone()
-        conn.close()
-        if row:
-            user = {
-                "username": row["username"],
-                "password_hash": row["password_hash"],
-                "role": row["role"],
-                "email": row["email"],
-                "verified": bool(row["verified"]),
-            }
-    except Exception as db_exc:
-        logger.error("DB error during login lookup: %s", db_exc)
+    user = db.get_user_by_username_or_email(DB_PATH, username)
 
     if not user or not verify_password(form_data.password, user["password_hash"]):
         _record_attempt(_LOGIN_ATTEMPTS, client_key)

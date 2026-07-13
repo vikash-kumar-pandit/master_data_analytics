@@ -1,6 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { API_BASE_URL } from '../config';
+const BASE_URL = API_BASE_URL.replace(/\/api\/?$/, '');
+
+function getAuthHeaders() {
+  try {
+    const raw = sessionStorage.getItem('my_data_platform_auth') || localStorage.getItem('my_data_platform_auth');
+    if (raw) {
+      const token = JSON.parse(raw)?.token;
+      if (token) return { Authorization: `Bearer ${token}` };
+    }
+  } catch {}
+  return {};
+}
 
 export default function SearchAndExport({ rows, analysis }) {
   const [searchQuery, setSearchQuery] = useState('');
@@ -21,11 +33,11 @@ export default function SearchAndExport({ rows, analysis }) {
     setSearchLoading(true);
     setSearchError('');
     try {
-      const response = await axios.post(`${API_BASE_URL}/api/search/catalog`, {
+      const response = await axios.post(`${BASE_URL}/api/search/catalog`, {
         query: searchQuery,
         limit: 20,
         offset: 0,
-      });
+      }, { headers: getAuthHeaders() });
       setSearchResults(response.data.items || []);
     } catch (error) {
       setSearchError(error?.response?.data?.detail || 'Search failed');
@@ -51,12 +63,15 @@ export default function SearchAndExport({ rows, analysis }) {
           : '/api/export/json';
 
       const response = await axios.post(
-        `${API_BASE_URL}${endpoint}`,
+        `${BASE_URL}${endpoint}`,
         {
           rows: rows,
           filename: exportFilename || 'export',
         },
-        { responseType: 'blob' }
+        { 
+          responseType: 'blob',
+          headers: getAuthHeaders()
+        }
       );
 
       const url = window.URL.createObjectURL(new Blob([response.data]));

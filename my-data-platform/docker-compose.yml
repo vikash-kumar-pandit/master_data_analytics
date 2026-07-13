@@ -1,53 +1,172 @@
 version: '3.8'
 
 services:
+  db:
+    image: postgres:15-alpine
+    container_name: datasaas_db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_DB: ${POSTGRES_DB:-datasaas_db}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - backend-net
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 2G
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
+
   redis:
     image: redis:7-alpine
-    container_name: data-platform-cache
-    command: redis-server --appendonly yes
-    ports:
-      - "6379:6379"
+    container_name: datasaas_redis
+    volumes:
+      - redis_data:/data
     networks:
-      - data-platform-network
+      - backend-net
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.1'
+          memory: 64M
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
 
-  backend:
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: datasaas_api
+    command: >
+      sh -c "python wait-for-db.py &&
+             python -c 'from database import init_db; init_db()' &&
+             uvicorn main:app --host 0.0.0.0 --port 8000 --workers 2"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - auth_data:/app/data
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-password}@db:5432/${POSTGRES_DB:-datasaas_db}
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
+      AUTH_DB_PATH: /app/data/auth.sqlite3
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-change-this-in-production-please-use-a-strong-32plus-char-secret}
+      APP_ENV: staging
+      APP_BASE_URL: ${APP_BASE_URL:-http://localhost}
+    networks:
+      - backend-net
+      - frontend-net
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+    restart: always
+
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: datasaas_worker
+    command: sh -c "python wait-for-db.py && celery -A worker.celery_app worker --loglevel=info --concurrency=2"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - auth_data:/app/data
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-password}@db:5432/${POSTGRES_DB:-datasaas_db}
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
+      AUTH_DB_PATH: /app/data/auth.sqlite3
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-change-this-in-production-please-use-a-strong-32plus-char-secret}
+      APP_ENV: staging
+    networks:
+      - backend-net
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    restart: always
+
+  flower:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: datasaas_flower
+    command: celery -A worker.celery_app flower --port=5555
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
+    networks:
+      - backend-net
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+    restart: always
+
+  nginx:
     build:
       context: .
-      dockerfile: backend/Dockerfile
-    container_name: data-platform-api
-    environment:
-      REDIS_URL: redis://redis:6379/0
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      CORS_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
+      dockerfile: ./nginx/Dockerfile
+    container_name: datasaas_nginx
     ports:
-      - "8000:8000"
+      - "80:80"
     depends_on:
-      - redis
+      - api
     networks:
-      - data-platform-network
-    volumes:
-      - ./backend:/app
-      - /app/__pycache__
-    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+      - frontend-net
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+    restart: always
 
-  celery_worker:
-    build:
-      context: .
-      dockerfile: backend/Dockerfile
-    container_name: data-platform-worker
-    command: celery -A worker.celery_app worker --loglevel=info -c 4 --max-tasks-per-child=1000
-    environment:
-      REDIS_URL: redis://redis:6379/0
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-    depends_on:
-      - redis
-      - backend
-    networks:
-      - data-platform-network
-    volumes:
-      - ./backend:/app
-      - /app/__pycache__
+volumes:
+  postgres_data:
+    name: datasaas_postgres_data
+  redis_data:
+    name: datasaas_redis_data
+  auth_data:
+    name: datasaas_auth_data
 
 networks:
-  data-platform-network:
-    driver: bridge
+  frontend-net:
+    name: datasaas_frontend_net
+  backend-net:
+    name: datasaas_backend_net

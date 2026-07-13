@@ -1,6 +1,18 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { API_BASE_URL } from '../config';
+const BASE_URL = API_BASE_URL.replace(/\/api\/?$/, '');
+
+function getAuthHeaders() {
+  try {
+    const raw = sessionStorage.getItem('my_data_platform_auth') || localStorage.getItem('my_data_platform_auth');
+    if (raw) {
+      const token = JSON.parse(raw)?.token;
+      if (token) return { Authorization: `Bearer ${token}` };
+    }
+  } catch {}
+  return {};
+}
 
 const STEP_OPTIONS = [
   { key: 'profile', label: 'Profile data' },
@@ -36,7 +48,7 @@ export default function WorkflowBuilder({ rows, targetOptions = [], onWorkflowRu
 
   const loadWorkflows = async () => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/api/workflows`);
+      const response = await axios.get(`${BASE_URL}/api/workflows`, { headers: getAuthHeaders() });
       setWorkflows(response.data.items || []);
     } catch (fetchError) {
       setWorkflows([]);
@@ -82,7 +94,7 @@ export default function WorkflowBuilder({ rows, targetOptions = [], onWorkflowRu
     setStatus('Saving workflow...');
 
     try {
-      await axios.post(`${API_BASE_URL}/api/workflows`, buildPayload());
+      await axios.post(`${BASE_URL}/api/workflows`, buildPayload(), { headers: getAuthHeaders() });
       setStatus('Workflow saved.');
       await loadWorkflows();
     } catch (saveError) {
@@ -104,9 +116,9 @@ export default function WorkflowBuilder({ rows, targetOptions = [], onWorkflowRu
     setStatus(`Running ${workflow.name}...`);
 
     try {
-      const response = await axios.post(`${API_BASE_URL}/api/workflows/${workflow.id}/run`, {
+      const response = await axios.post(`${BASE_URL}/api/workflows/${workflow.id}/run`, {
         rows,
-      });
+      }, { headers: getAuthHeaders() });
       setResult(response.data);
       setStatus(`Completed ${workflow.name}.`);
       onWorkflowRun?.(response.data);
@@ -129,13 +141,13 @@ export default function WorkflowBuilder({ rows, targetOptions = [], onWorkflowRu
     setStatus('Saving draft workflow...');
 
     try {
-      const saveResponse = await axios.post(`${API_BASE_URL}/api/workflows`, buildPayload());
+      const saveResponse = await axios.post(`${BASE_URL}/api/workflows`, buildPayload(), { headers: getAuthHeaders() });
       const savedWorkflow = saveResponse.data.workflow;
       setStatus(`Running ${savedWorkflow.name}...`);
 
-      const runResponse = await axios.post(`${API_BASE_URL}/api/workflows/${savedWorkflow.id}/run`, {
+      const runResponse = await axios.post(`${BASE_URL}/api/workflows/${savedWorkflow.id}/run`, {
         rows,
-      });
+      }, { headers: getAuthHeaders() });
 
       setResult(runResponse.data);
       setStatus(`Completed ${savedWorkflow.name}.`);

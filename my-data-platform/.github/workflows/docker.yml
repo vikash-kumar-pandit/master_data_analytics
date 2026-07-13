@@ -1,0 +1,41 @@
+name: Docker Build Validation
+
+on:
+  pull_request:
+    branches: [ main, master ]
+    paths:
+      - 'backend/Dockerfile'
+      - 'backend/requirements.txt'
+      - 'frontend/Dockerfile'
+      - 'frontend/package.json'
+      - 'nginx/**'
+      - 'docker-compose.yml'
+
+jobs:
+  validate-docker:
+    name: Test Build Container Images
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: actions/setup-buildx-action@v3
+
+      - name: Validate Backend Docker Build
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Validate Unified Nginx Docker Build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./nginx/Dockerfile
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

@@ -6,7 +6,10 @@ from typing import Any
 
 import numpy as np
 import polars as pl
+import logging
+from hypothesis_tester import run_automated_ab_test
 
+logger = logging.getLogger("analytics_engine")
 
 QUESTION_INTENT_KEYWORDS = {
     "predictive": ["predict", "forecast", "future", "next", "will happen", "hoga", "hogi", "when", "kab"],
@@ -136,69 +139,152 @@ def _summary_stats(dataframe: pl.DataFrame, columns: list[str]) -> list[dict[str
     return stats
 
 
+def _parse_date_flexible(value: Any) -> datetime | None:
+    """Try to parse a date/time value from many common string formats."""
+    if value is None:
+        return None
+    s = str(value).strip()
+    formats = [
+        "%Y-%m-%d", "%d-%m-%Y", "%m/%d/%Y", "%d/%m/%Y",
+        "%Y/%m/%d", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S",
+        "%B %d, %Y", "%b %d, %Y", "%d %B %Y", "%d %b %Y",
+        "%Y",
+    ]
+    for fmt in formats:
+        try:
+            return datetime.strptime(s, fmt)
+        except ValueError:
+            continue
+    return None
+
+
 def _compute_trend_points(
     dataframe: pl.DataFrame,
     metric_column: str,
     date_column: str | None = None,
 ) -> list[dict[str, Any]]:
+    """Return normalized [{date_label, value}] list sorted by date."""
     if metric_column not in dataframe.columns:
         return []
 
-    selected_columns: list[pl.Expr] = [pl.col(metric_column).cast(pl.Float64, strict=False).fill_null(0.0).alias(metric_column)]
-    if date_column and date_column in dataframe.columns and date_column != metric_column:
-        selected_columns.append(pl.col(date_column).cast(pl.Utf8).alias(date_column))
+    has_date = date_column and date_column in dataframe.columns and date_column != metric_column
 
-    working = dataframe.select(selected_columns)
-
-    if date_column and date_column in dataframe.columns:
+    if has_date:
+        working = dataframe.select([
+            pl.col(metric_column).cast(pl.Float64, strict=False).fill_null(0.0).alias(metric_column),
+            pl.col(date_column).cast(pl.Utf8).alias(date_column),
+        ])
         aggregated = (
             working.group_by(date_column)
-            .agg(pl.col(metric_column).sum().alias(metric_column))
-            .sort(date_column)
+            .agg(pl.col(metric_column).sum().alias("value"))
+            .rename({date_column: "date_label"})
         )
-        return aggregated.to_dicts()
+        # Try to sort by parsed date, fall back to string sort
+        rows_list = aggregated.to_dicts()
+        def _sort_key(r: dict) -> Any:
+            parsed = _parse_date_flexible(r["date_label"])
+            return parsed if parsed is not None else r["date_label"]
+        rows_list.sort(key=_sort_key)
+        return rows_list
 
-    indexed = working.with_row_index("row_index").select(
-        [pl.col("row_index"), pl.col(metric_column)]
+    # No date column — use row index as x-axis
+    indexed = (
+        dataframe
+        .select(pl.col(metric_column).cast(pl.Float64, strict=False).fill_null(0.0).alias("value"))
+        .with_row_index("date_label")
     )
     return indexed.to_dicts()
 
 
-def _forecast_from_points(points: list[dict[str, Any]], horizon: int = 7) -> list[dict[str, Any]]:
-    if not points:
-        return []
+def _moving_average(values: list[float], window: int = 3) -> list[float]:
+    """Simple centered moving average for smoothing."""
+    result = []
+    n = len(values)
+    for i in range(n):
+        lo = max(0, i - window // 2)
+        hi = min(n, i + window // 2 + 1)
+        result.append(float(np.mean(values[lo:hi])))
+    return result
 
-    numeric_points = []
-    labels = []
-    for index, point in enumerate(points):
-        label = point.get("date") if "date" in point else point.get("row_index", index)
-        value = point.get(next((key for key in point.keys() if key not in {"date", "row_index"}), ""))
+
+def _forecast_from_points(
+    points: list[dict[str, Any]],
+    horizon: int = 7,
+    metric_column: str | None = None,
+) -> dict[str, Any]:
+    """Linear regression forecast from normalized [{date_label, value}] points.
+
+    Returns a dict with 'forecast', 'slope', 'r_squared', 'mae', 'trend_direction',
+    'growth_pct', 'smoothed_history' — everything the frontend needs.
+    """
+    if not points:
+        return {"forecast": [], "error": "No data points available"}
+
+    # Extract (label, value) from normalized structure
+    numeric_points: list[float] = []
+    labels: list[Any] = []
+    for i, pt in enumerate(points):
+        val = pt.get("value")
+        lbl = pt.get("date_label", i)
         try:
-            numeric_points.append(float(value))
-            labels.append(label)
-        except Exception:
+            numeric_points.append(float(val))
+            labels.append(lbl)
+        except (TypeError, ValueError):
             continue
 
     if len(numeric_points) < 2:
-        return []
+        return {"forecast": [], "error": "Need at least 2 data points to forecast"}
 
-    x_values = np.arange(len(numeric_points), dtype=float)
-    y_values = np.asarray(numeric_points, dtype=float)
-    slope, intercept = np.polyfit(x_values, y_values, 1)
+    n = len(numeric_points)
+    x = np.arange(n, dtype=float)
+    y = np.asarray(numeric_points, dtype=float)
 
-    forecast: list[dict[str, Any]] = []
+    # Linear regression (OLS)
+    slope, intercept = np.polyfit(x, y, 1)
+    y_pred_history = slope * x + intercept
+
+    # R-squared
+    ss_res = float(np.sum((y - y_pred_history) ** 2))
+    ss_tot = float(np.sum((y - np.mean(y)) ** 2))
+    r_squared = round(1 - ss_res / ss_tot, 4) if ss_tot > 0 else 0.0
+
+    # MAE on history
+    mae = round(float(np.mean(np.abs(y - y_pred_history))), 4)
+
+    # Smoothed history (3-period MA)
+    smoothed = _moving_average(numeric_points, window=min(3, n))
+
+    # Growth stats
+    first_val = float(y[0]) if y[0] != 0 else 1.0
+    last_val = float(y[-1])
+    growth_pct = round(((last_val - first_val) / abs(first_val)) * 100, 2)
+    trend_direction = "upward" if slope > 0.01 else ("downward" if slope < -0.01 else "stable")
+
+    # Build future labels
+    last_label = labels[-1] if labels else n - 1
+    last_date = _parse_date_flexible(last_label)
+
+    forecast_pts: list[dict[str, Any]] = []
     for offset in range(1, horizon + 1):
-        predicted_index = len(numeric_points) - 1 + offset
-        predicted_value = float(max(0.0, slope * predicted_index + intercept))
-        label = predicted_index
-        if labels and isinstance(labels[-1], str):
-            try:
-                last_date = datetime.fromisoformat(str(labels[-1]))
-                label = (last_date + timedelta(days=offset)).date().isoformat()
-            except Exception:
-                label = f"t+{offset}"
-        forecast.append({"point": label, "value": predicted_value})
-    return forecast
+        pred_x = n - 1 + offset
+        pred_val = float(max(0.0, slope * pred_x + intercept))
+        if last_date is not None:
+            lbl = (last_date + timedelta(days=offset)).date().isoformat()
+        else:
+            lbl = f"t+{offset}"
+        forecast_pts.append({"point": lbl, "value": round(pred_val, 4)})
+
+    return {
+        "forecast": forecast_pts,
+        "slope": round(float(slope), 6),
+        "intercept": round(float(intercept), 4),
+        "r_squared": r_squared,
+        "mae": mae,
+        "n_points": n,
+        "growth_pct": growth_pct,
+        "trend_direction": trend_direction,
+        "smoothed_history": [round(v, 4) for v in smoothed],
+    }
 
 
 def _build_recommendations(intent: str, question: str, relevant_stats: list[dict[str, Any]], comparison: dict[str, Any] | None = None) -> list[str]:
@@ -277,7 +363,8 @@ def analyze_question(
     if metric_column:
         trend_points = _compute_trend_points(dataframe, metric_column, date_column=date_column)
         if intent == "predictive":
-            forecast = _forecast_from_points(trend_points, horizon=7)
+            forecast_result = _forecast_from_points(trend_points, horizon=7, metric_column=metric_column)
+            forecast = forecast_result.get("forecast", [])
 
     if category_column and metric_column and category_column in columns and metric_column in columns:
         try:
@@ -439,6 +526,26 @@ def analyze_question(
                 ],
             }
         )
+        
+        # Run Automated Hypothesis Testing
+        try:
+            ab_result = run_automated_ab_test(dataframe, metric_column, category_column)
+            if ab_result and ab_result.get("status") == "success":
+                report_sections.append({
+                    "heading": "Automated Hypothesis Test (A/B Test)",
+                    "rows": [
+                        {"label": "Metric Tested", "value": ab_result["metric"]},
+                        {"label": f"Group A ({ab_result['group_a']['name']}) Average", "value": f"{ab_result['group_a']['average']:.2f} (n={ab_result['group_a']['sample_size']})"},
+                        {"label": f"Group B ({ab_result['group_b']['name']}) Average", "value": f"{ab_result['group_b']['average']:.2f} (n={ab_result['group_b']['sample_size']})"},
+                        {"label": "P-Value", "value": f"{ab_result['p_value']:.4f}"},
+                        {"label": "Statistically Significant", "value": "Yes" if ab_result["is_statistically_significant"] else "No"},
+                        {"label": "AI Scientist Insight", "value": ab_result["business_insight"]}
+                    ]
+                })
+                # Add to answer_lines if it's statistically significant or comparative
+                answer_lines.append(ab_result["business_insight"])
+        except Exception as ab_exc:
+            logger.warning(f"Failed to append hypothesis test to report: {ab_exc}")
 
     report_sections.append(
         {
@@ -490,26 +597,79 @@ def forecast_metric(
         date_column = _likely_date_column(dataframe.columns)
 
     chart_data = _compute_trend_points(dataframe, metric_column, date_column=date_column)
-    forecast = _forecast_from_points(chart_data, horizon=max(1, min(horizon, 30)))
+    forecast_result = _forecast_from_points(chart_data, horizon=max(1, min(horizon, 30)), metric_column=metric_column)
 
-    answer = (
-        f"The forecast for {metric_column} shows the trend likely continuing over the next {len(forecast)} periods."
-        if forecast
-        else f"A forecast could not be built confidently for {metric_column}."
-    )
+    forecast_pts = forecast_result.get("forecast", [])
+    r_squared = forecast_result.get("r_squared", 0)
+    mae = forecast_result.get("mae", 0)
+    slope = forecast_result.get("slope", 0)
+    growth_pct = forecast_result.get("growth_pct", 0)
+    trend_direction = forecast_result.get("trend_direction", "stable")
+    smoothed_history = forecast_result.get("smoothed_history", [])
+    n_points = forecast_result.get("n_points", 0)
+    forecast_error = forecast_result.get("error")
+
+    if forecast_error:
+        answer = f"Forecast could not be generated: {forecast_error}"
+    elif forecast_pts:
+        end_val = forecast_pts[-1]["value"]
+        answer = (
+            f"Based on {n_points} historical data points for '{metric_column}', the trend is {trend_direction} "
+            f"(slope: {slope:+.4f}, R²: {r_squared:.3f}). "
+            f"The model projects the metric will reach approximately {end_val:.2f} "
+            f"after {len(forecast_pts)} periods. Historical growth: {growth_pct:+.1f}%."
+        )
+    else:
+        answer = f"A forecast could not be built confidently for '{metric_column}'. Ensure the column contains numeric values."
+
+    # Summary stats for the metric
+    metric_series = dataframe.select(
+        pl.col(metric_column).cast(pl.Float64, strict=False).fill_null(0.0)
+    ).to_series()
+    metric_stats = {
+        "column": metric_column,
+        "sum": round(float(metric_series.sum()), 4),
+        "mean": round(float(metric_series.mean() or 0), 4),
+        "min": round(float(metric_series.min() or 0), 4),
+        "max": round(float(metric_series.max() or 0), 4),
+        "std": round(float(metric_series.std() or 0), 4),
+        "count": int(metric_series.len()),
+    }
 
     report_sections = [
         {
             "heading": "Forecast Inputs",
             "rows": [
                 {"label": "Metric Column", "value": metric_column},
-                {"label": "Date Column", "value": date_column or "Row order"},
-                {"label": "Horizon", "value": horizon},
+                {"label": "Date Column", "value": date_column or "Row order (index)"},
+                {"label": "Horizon", "value": f"{len(forecast_pts)} periods"},
+                {"label": "Model", "value": "Linear Trend Regression (OLS)"},
+                {"label": "Data Points Used", "value": n_points},
+            ],
+        },
+        {
+            "heading": "Model Performance",
+            "rows": [
+                {"label": "R² (Fit Quality)", "value": f"{r_squared:.4f}"},
+                {"label": "MAE", "value": f"{mae:.4f}"},
+                {"label": "Slope", "value": f"{slope:+.6f} per period"},
+                {"label": "Trend Direction", "value": trend_direction.capitalize()},
+                {"label": "Historical Growth", "value": f"{growth_pct:+.2f}%"},
+            ],
+        },
+        {
+            "heading": "Metric Summary",
+            "rows": [
+                {"label": "Total", "value": f"{metric_stats['sum']:.2f}"},
+                {"label": "Average", "value": f"{metric_stats['mean']:.2f}"},
+                {"label": "Min", "value": f"{metric_stats['min']:.2f}"},
+                {"label": "Max", "value": f"{metric_stats['max']:.2f}"},
+                {"label": "Std Dev", "value": f"{metric_stats['std']:.2f}"},
             ],
         },
         {
             "heading": "Forecast Output",
-            "rows": [{"label": item["point"], "value": f"{item['value']:.2f}"} for item in forecast],
+            "rows": [{"label": str(item["point"]), "value": f"{item['value']:.2f}"} for item in forecast_pts],
         },
     ]
 
@@ -518,15 +678,26 @@ def forecast_metric(
         "question": f"Forecast {metric_column}",
         "answer": answer,
         "report_title": "Forecast Report",
-        "report_subtitle": f"Metric: {metric_column}",
+        "report_subtitle": f"Metric: {metric_column} | Direction: {trend_direction}",
         "report_sections": report_sections,
         "recommendations": [
             "Validate the forecast against seasonality and recent business events.",
             "Use the predicted values as a planning range, not as a guarantee.",
+            f"The R² score of {r_squared:.3f} indicates {'good' if r_squared > 0.7 else 'moderate' if r_squared > 0.4 else 'weak'} model fit.",
         ],
         "chart_data": chart_data,
-        "forecast": forecast,
-        "metrics": _summary_stats(dataframe, [metric_column]),
+        "forecast": forecast_pts,
+        "model_stats": {
+            "r_squared": r_squared,
+            "mae": mae,
+            "slope": slope,
+            "growth_pct": growth_pct,
+            "trend_direction": trend_direction,
+            "n_points": n_points,
+        },
+        "smoothed_history": smoothed_history,
+        "metric_stats": metric_stats,
+        "metrics": [metric_stats],
     }
 
 

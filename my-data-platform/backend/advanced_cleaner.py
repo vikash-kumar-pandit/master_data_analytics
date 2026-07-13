@@ -105,9 +105,11 @@ def advanced_data_cleaning(dataframe: pl.DataFrame) -> pl.DataFrame:
             continue
 
         if dtype in {pl.Int64, pl.Int32, pl.Float64, pl.Float32}:
-            median_value = cleaned.get_column(column_name).median()
-            if median_value is not None:
-                cleaned = cleaned.with_columns(pl.col(column_name).fill_null(median_value).alias(column_name))
+            # Use median to fill missing numeric values
+            col_series = cleaned.get_column(column_name)
+            median_val = col_series.median()
+            if median_val is not None:
+                cleaned = cleaned.with_columns(pl.col(column_name).fill_null(median_val).alias(column_name))
         elif dtype == pl.Utf8:
             cleaned = _impute_text_mode(cleaned, column_name)
 

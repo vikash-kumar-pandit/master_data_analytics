@@ -1,77 +1,111 @@
-# Deployment Guide — Make the project available 24/7
+# DataSaaS Pro Platform Deployment & Operations Guide
 
-This guide explains how to host the frontend and backend so users can access the app 24/7.
+This guide details how to deploy and operate the DataSaaS Pro platform (React Frontend, FastAPI Backend, Celery Workers, Redis Cache, PostgreSQL Database, and Nginx reverse proxy) in Dockerized environments.
 
-Summary (recommended setup):
-- Frontend: Deploy static site to GitHub Pages (workflow added). Alternatively Netlify/Vercel.
-- Backend: Deploy FastAPI app to Render / Railway / Fly / Heroku (Render recommended for simplicity).
+---
 
-1) Frontend (automatic via GitHub Actions)
-- I added `.github/workflows/deploy_frontend.yml` which builds `frontend` and deploys `frontend/dist` to the repository's `gh-pages` branch.
-- To enable GitHub Pages for your repo:
-  - Push this repository to GitHub.
-  - In the repository Settings → Pages, set Source to the `gh-pages` branch (or let Actions create it and then enable).
+## 🏗️ Deployment Architecture
 
-Notes:
-- The workflow triggers on pushes to `main` or `master`.
-- The site will be available at `https://<your-github-username>.github.io/<repo-name>/`.
+The production Docker Compose setup configures a **Single Nginx Gateway** serving static files directly and routing API and websocket calls, securing container boundaries and reducing resource footprints:
 
-2) Backend (options)
-- Option A — Render (recommended):
-  - Create a free Render account and connect your repo.
-  - Create a new Web Service, point to the `backend` directory, set the start command to:
-    - `uvicorn backend.main:app --host 0.0.0.0 --port 10000 --reload` (remove `--reload` for production)
-  - Add required environment variables in the Render dashboard (SECRET keys, DB path, SMTP settings, etc.).
-
-- Option B — Railway / Fly / Heroku: similar steps—create a project, point to the repo, provide start command and env vars.
-
-- Option C — Container (any provider): Build a Docker image and deploy.
-  - Create `Dockerfile` in `backend/` (example below) and push to Render or any container host.
-
-Example simple Dockerfile (manual create in `backend/Dockerfile`):
-```
-FROM python:3.11-slim
-WORKDIR /app
-COPY ./backend /app
-RUN pip install --upgrade pip
-# If you have requirements.txt, uncomment next line
-# COPY backend/requirements.txt /app/requirements.txt
-# RUN pip install -r requirements.txt
-RUN pip install uvicorn fastapi polars fpdf python-multipart
-EXPOSE 8000
-CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]
+```text
+                             Internet
+                                │
+                        NGINX (Gateway)
+                         (Serves React)
+                                │ (Port 80)
+                         ┌──────┴──────┐
+                         │             │
+                      FastAPI      Postgres DB
+                         │
+         ┌───────────────┴───────────────┐
+         │                               │
+       Redis                       Celery Worker
+                                         │
+                                      Flower (Dev)
 ```
 
-3) CORS and frontend <-> backend connectivity
-- If frontend is served from `https://<user>.github.io/<repo>/`, set `VITE_API_URL` in frontend build or use relative path.
-- Ensure FastAPI `CORSMiddleware` allows the frontend origin.
+* **Frontend Network (`datasaas_frontend_net`)**: Hosts Nginx (Gateway) and FastAPI.
+* **Backend Network (`datasaas_backend_net`)**: Hosts FastAPI, PostgreSQL, Redis, Celery, and Flower. Database ports are shielded from host access in production.
 
-4) Continuous deployment for backend
-- Use Render's native GitHub integration with `render.yaml` for automatic deploys on push.
-- The repo also includes a Dockerfile and GHCR workflow as an optional image build path, but it is not required for the Render deployment.
+---
 
-5) Custom domain (optional)
-- Configure GitHub Pages custom domain for frontend and configure backend custom domain or proxy.
+## ⚙️ Environment Configuration
 
-If you want, I can:
-- (A) Walk through setting up Render and create the exact service configuration.
-- (B) Add a Docker Hub publish workflow instead of GHCR if you prefer that registry.
+1. Copy the `.env.example` template to `.env` in the project root:
+   ```bash
+   cp .env.example .env
+   ```
+2. Populate the parameters in `.env`:
+   * **`JWT_SECRET_KEY`**: Set a strong cryptographically secure 32+ character key.
+   * **`ADMIN_USERNAME`** & **`ADMIN_PASSWORD`**: Seed credentials for the default administrator.
+   * **`POSTGRES_USER`**, **`POSTGRES_PASSWORD`**, & **`POSTGRES_DB`**: Settings for the PostgreSQL database container.
 
-Tell me which option you prefer and I'll continue: create Dockerfile, add backend CI/CD, or walk you through Render setup step-by-step.
+---
 
-6) Render IaaS automation (recommended)
-- I added a `render.yaml` at the repo root so Render can auto-create the backend service from the repo.
-- To use it:
-  1. Push this repo to GitHub.
-  2. In Render, create a new web service and choose "Connect a repository".
-  3. Render will detect `render.yaml` and create `my-data-platform-backend` from it.
-  4. Add the runtime env vars in the Render dashboard (`SMTP_*`, `SENTRY_DSN`, and any DB overrides you need).
-  5. Deploy — Render will run the `buildCommand` and `startCommand` automatically.
+## 🚀 One-Command Deployment
 
-Notes on `render.yaml`:
-- It uses `uvicorn backend.main:app` and expects `requirements.txt` in `backend/` (file added).
-- The file includes placeholder env vars — move secrets into Render's secret manager rather than committing them.
+The platform is designed to be fully bootable in development, staging, or production profiles with a single command.
 
-If you'd like, I can also:
-- (C) Configure a Render Health Check URL or custom domains and update CORS accordingly.
+### 1. Development Mode (With Hot Reloading & UI Dev Server)
+In development, the local files are mounted into the containers to enable automatic reloading of both backend Python files (via uvicorn reload) and frontend React files (via Vite Dev Server). Ports 5173, 8000, 5432, and 5555 are mapped directly to the host for debugger connections.
 
+Run the following command:
+```bash
+docker compose -f docker-compose.yml -f docker-compose.dev.yml --profile development up --build
+```
+* **Frontend Web Application**: [http://localhost:5173](http://localhost:5173)
+* **Backend REST API**: [http://localhost:8000](http://localhost:8000)
+* **Celery Flower Dashboard**: [http://localhost:5555](http://localhost:5555)
+
+---
+
+### 2. Staging Mode (Gateway Compilation Verification)
+Runs the platform exactly as configured in the base staging compose file. This utilizes a multi-stage Nginx Dockerfile to compile Vite static assets and serve them directly, eliminating the need for a separate frontend container.
+
+Run the following command:
+```bash
+docker compose --profile staging up --build
+```
+* **Frontend & Gateway (Nginx)**: [http://localhost](http://localhost)
+
+---
+
+### 3. Production Mode (Hardened Stack)
+Production mode locks down all ports on the host machine except for Port 80 (Nginx). Security headers (CSP, XSS, X-Frame) are enforced, debug logs are disabled, CPU/Memory resource constraints are applied, and containers are set to restart automatically if they crash.
+
+Run the following command:
+```bash
+docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile production up -d --build
+```
+* **Production URL**: [http://localhost](http://localhost) (or configured domain)
+
+To stop the production stack:
+```bash
+docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile production down
+```
+
+---
+
+## 🔍 Verification & Health Checks
+
+Verify container execution status and non-root execution:
+
+1. **Verify Container Health**:
+   ```bash
+   docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+   ```
+   All containers (`datasaas_api`, `datasaas_db`, `datasaas_redis`, etc.) should display `(healthy)`.
+
+2. **Verify Non-Root execution**:
+   Ensure FastAPI and Celery are running under the unprivileged `appuser` (UID 1000):
+   ```bash
+   docker exec -it datasaas_api whoami
+   # Output should be: appuser
+   ```
+
+3. **Verify Resource Constraints**:
+   Check if CPU/Memory limits are enforced:
+   ```bash
+   docker inspect datasaas_api --format "CPUs: {{.HostConfig.NanoCpus}}, Memory: {{.HostConfig.Memory}} bytes"
+   ```

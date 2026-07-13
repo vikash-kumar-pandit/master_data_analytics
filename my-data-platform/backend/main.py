@@ -1,5 +1,20 @@
 import io
 import os
+# Add GTK+ DLL directory for WeasyPrint on Windows
+if os.name == 'nt':
+    for sd in [
+        r"C:\Program Files\GTK3-Runtime Win64\bin",
+        r"C:\Program Files\GTK3-Runtime\bin",
+        r"C:\Program Files (x86)\GTK3-Runtime Win64\bin",
+        r"C:\Program Files (x86)\GTK3-Runtime\bin",
+    ]:
+        if os.path.exists(sd):
+            try:
+                os.add_dll_directory(sd)
+                break
+            except Exception:
+                pass
+
 import json
 import logging
 import dotenv
@@ -8,8 +23,9 @@ import zipfile
 import base64
 from datetime import datetime, timezone
 from typing import Any
+import asyncio
 
-from fastapi import FastAPI, UploadFile, File, HTTPException, Body, Form, Depends
+from fastapi import FastAPI, UploadFile, File, HTTPException, Body, Form, Depends, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
@@ -41,6 +57,7 @@ from share_manager import create_share_link, get_share, increment_view_count, re
 from executive_summary import generate_executive_summary
 from scheduled_exports import create_scheduled_export, get_schedule, list_schedules, delete_schedule
 from data_quality import calculate_data_quality_metrics, get_quality_report
+from feature_engineer import auto_feature_engineer
 
 try:
     from openai import OpenAI
@@ -97,7 +114,126 @@ async def lifespan(app_context: FastAPI):
 
 app = FastAPI(title="Stateless No-Code Big Data Platform", lifespan=lifespan)
 app.include_router(auth_router, prefix="/api/auth")
+from pipeline_routes import router as pipeline_router
+app.include_router(pipeline_router)
+from profiling.routes import router as profiling_router
+app.include_router(profiling_router)
+from preparation.routes import router as preparation_router
+app.include_router(preparation_router)
+from copilot.routes import router as copilot_router
+app.include_router(copilot_router)
+from visualization.routes import router as visualization_router
+app.include_router(visualization_router)
 setup_observability(app)
+
+from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from fastapi.responses import JSONResponse
+
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request, exc):
+    logger.error(f"HTTP exception: {exc.detail} (status code: {exc.status_code})")
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"status": "error", "detail": exc.detail}
+    )
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request, exc):
+    logger.error(f"Validation error: {exc.errors()}")
+    return JSONResponse(
+        status_code=422,
+        content={"status": "error", "detail": "Invalid request fields", "errors": exc.errors()}
+    )
+
+@app.exception_handler(Exception)
+async def general_exception_handler(request, exc):
+    logger.exception(f"Unhandled server exception: {exc}")
+    return JSONResponse(
+        status_code=500,
+        content={"status": "error", "detail": "An unexpected error occurred. Please contact the administrator."}
+    )
+
+
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: list[WebSocket] = []
+
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.append(websocket)
+
+    def disconnect(self, websocket: WebSocket):
+        if websocket in self.active_connections:
+            self.active_connections.remove(websocket)
+
+    async def broadcast(self, message: dict):
+        for connection in self.active_connections:
+            try:
+                await connection.send_json(message)
+            except Exception:
+                pass
+
+manager = ConnectionManager()
+
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await manager.connect(websocket)
+    try:
+        # Send welcome event immediately on connect
+        await websocket.send_json({
+            "type": "system:connected",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "payload": {
+                "message": "Real-time monitor connected",
+                "active_connections": len(manager.active_connections),
+            }
+        })
+
+        # Seed with recent activity from DB (last 10 events)
+        try:
+            from database import SessionLocal
+            from models import UserActivity
+            with SessionLocal() as db:
+                recent = db.query(UserActivity).order_by(
+                    UserActivity.timestamp.desc()
+                ).limit(10).all()
+            for act in reversed(recent):
+                await websocket.send_json({
+                    "type": "activity:history",
+                    "timestamp": act.timestamp.isoformat() if act.timestamp else datetime.now(timezone.utc).isoformat(),
+                    "payload": {
+                        "action": act.action,
+                        "username": act.username,
+                        "resource": act.resource,
+                        "status": act.metadata_info.get("status_code", 200) if act.metadata_info else 200,
+                        "duration_ms": act.metadata_info.get("duration_ms", 0) if act.metadata_info else 0,
+                    }
+                })
+        except Exception as seed_exc:
+            logger.warning(f"Could not seed activity on WS connect: {seed_exc}")
+
+        # Heartbeat loop — ping every 10 seconds
+        tick = 0
+        while True:
+            await asyncio.sleep(10)
+            tick += 1
+            await websocket.send_json({
+                "type": "system:heartbeat",
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "payload": {
+                    "tick": tick,
+                    "active_connections": len(manager.active_connections),
+                }
+            })
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
+    except Exception:
+        manager.disconnect(websocket)
+
+async def broadcast_event(event: dict):
+    await manager.broadcast(event)
+
 
 
 class InsightRequest(BaseModel):
@@ -328,7 +464,7 @@ async def upload_file(
     semantics = identify_dataset_semantics(dataframe)
     analysis["domain_info"] = semantics
 
-    register_catalog_entry(
+    catalog_entry = register_catalog_entry(
         action="upload",
         dataset_name=file.filename,
         analysis=analysis,
@@ -336,6 +472,17 @@ async def upload_file(
         source="file_upload",
         created_by=current_user,
     )
+
+    await broadcast_event({
+        "type": "catalog:activity",
+        "payload": {
+            "action": "upload",
+            "dataset_name": file.filename,
+            "rows": analysis.get("rows"),
+            "cols": analysis.get("cols"),
+            "catalog_id": catalog_entry.get("id") if isinstance(catalog_entry, dict) else None,
+        },
+    })
 
     return {
         "analysis": analysis,
@@ -947,10 +1094,15 @@ async def clean_file(
         raise HTTPException(status_code=400, detail=f"Unable to parse dataset: {exc}") from exc
 
     cleaned_dataframe = advanced_data_cleaning(dataframe)
+    cleaned_dataframe, engineering_notes = auto_feature_engineer(cleaned_dataframe)
     analysis = analyze_dataframe(cleaned_dataframe)
     semantics = identify_dataset_semantics(cleaned_dataframe)
     analysis["domain_info"] = semantics
     cleaning_stats = generate_cleaning_stats(dataframe, cleaned_dataframe)
+    if engineering_notes:
+        if not cleaning_stats:
+            cleaning_stats = {}
+        cleaning_stats["engineering_notes"] = engineering_notes
 
     register_catalog_entry(
         action="clean",
@@ -1050,6 +1202,8 @@ async def download_results(
             automl_summary = {"error": str(exc)}
 
     if automl_summary:
+        if isinstance(automl_summary, dict) and "target_column" not in automl_summary:
+            automl_summary["target_column"] = target_column
         report_summary["automl"] = automl_summary
 
     if ai_insights:
@@ -1074,7 +1228,14 @@ async def get_catalog(
     limit: int = 20,
     current_user: dict = Depends(require_role(["viewer", "analyst", "admin"])),
 ):
-    return {"items": list_catalog_entries_for_user(current_user, limit=max(1, min(limit, 100)))}
+    try:
+        return {"items": list_catalog_entries_for_user(current_user, limit=max(1, min(limit, 100)))}
+    except Exception as exc:
+        logger.exception("Failed to list catalog entries: %s", exc)
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to retrieve dataset catalog. Please try again later."
+        )
 
 
 @app.get("/api/catalog/{entry_id}")
@@ -1082,12 +1243,21 @@ async def get_catalog_detail(
     entry_id: str,
     current_user: dict = Depends(require_role(["viewer", "analyst", "admin"])),
 ):
-    entry = get_catalog_entry(entry_id)
-    if not entry:
-        raise HTTPException(status_code=404, detail="Catalog entry not found")
-    if not is_catalog_entry_visible(entry, current_user):
-        raise HTTPException(status_code=404, detail="Catalog entry not found")
-    return entry
+    try:
+        entry = get_catalog_entry(entry_id)
+        if not entry:
+            raise HTTPException(status_code=404, detail="Catalog entry not found")
+        if not is_catalog_entry_visible(entry, current_user):
+            raise HTTPException(status_code=404, detail="Catalog entry not found")
+        return entry
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("Failed to retrieve catalog entry detail: %s", exc)
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to retrieve dataset details. Please try again later."
+        )
 
 
 @app.get("/api/activity/summary")
@@ -1096,11 +1266,18 @@ async def get_activity_summary(
     recent_limit: int = 20,
     current_user: dict = Depends(require_role(["viewer", "analyst", "admin"])),
 ):
-    return build_activity_summary(
-        current_user=current_user,
-        days=max(1, min(days, 365)),
-        recent_limit=max(5, min(recent_limit, 100)),
-    )
+    try:
+        return build_activity_summary(
+            current_user=current_user,
+            days=max(1, min(days, 365)),
+            recent_limit=max(5, min(recent_limit, 100)),
+        )
+    except Exception as exc:
+        logger.exception("Failed to build activity summary: %s", exc)
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to retrieve activity summary. Please try again later."
+        )
 
 
 @app.get("/api/dashboard/summary")
@@ -1110,12 +1287,19 @@ async def get_dashboard_summary(
     catalog_limit: int = 20,
     current_user: dict = Depends(require_role(["viewer", "analyst", "admin"])),
 ):
-    return build_dashboard_summary(
-        current_user=current_user,
-        days=days,
-        recent_limit=recent_limit,
-        catalog_limit=catalog_limit,
-    )
+    try:
+        return build_dashboard_summary(
+            current_user=current_user,
+            days=days,
+            recent_limit=recent_limit,
+            catalog_limit=catalog_limit,
+        )
+    except Exception as exc:
+        logger.exception("Failed to build dashboard summary: %s", exc)
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to retrieve dashboard summary. Please try again later."
+        )
 
 
 @app.get("/api/dashboard/trends")
@@ -1123,10 +1307,17 @@ async def get_dashboard_trends(
     window_days: int = 7,
     current_user: dict = Depends(require_role(["viewer", "analyst", "admin"])),
 ):
-    return build_dashboard_trends(
-        current_user=current_user,
-        window_days=window_days,
-    )
+    try:
+        return build_dashboard_trends(
+            current_user=current_user,
+            window_days=window_days,
+        )
+    except Exception as exc:
+        logger.exception("Failed to build dashboard trends: %s", exc)
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to retrieve dashboard trends. Please try again later."
+        )
 
 
 @app.post("/api/export/excel")
@@ -1324,7 +1515,14 @@ async def generate_quality_report(
 
 @app.get("/api/workflows")
 async def get_workflows(_: dict = Depends(require_role(["viewer", "analyst", "admin"]))):
-    return {"items": list_workflows()}
+    try:
+        return {"items": list_workflows()}
+    except Exception as exc:
+        logger.exception("Failed to list workflows: %s", exc)
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to retrieve workflows. Please try again later."
+        )
 
 
 @app.post("/api/workflows")
@@ -1332,9 +1530,16 @@ async def create_workflow(
     payload: WorkflowCreateRequest,
     _: dict = Depends(require_role(["analyst", "admin"])),
 ):
-    workflow = create_workflow_definition(payload.model_dump())
-    save_workflow(workflow)
-    return {"workflow": workflow}
+    try:
+        workflow = create_workflow_definition(payload.model_dump())
+        save_workflow(workflow)
+        return {"workflow": workflow}
+    except Exception as exc:
+        logger.exception("Failed to create workflow: %s", exc)
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to save workflow definition. Please check inputs."
+        )
 
 
 @app.get("/api/workflows/{workflow_id}")
@@ -1342,10 +1547,19 @@ async def get_workflow_detail(
     workflow_id: str,
     _: dict = Depends(require_role(["viewer", "analyst", "admin"])),
 ):
-    workflow = get_workflow(workflow_id)
-    if not workflow:
-        raise HTTPException(status_code=404, detail="Workflow not found")
-    return workflow
+    try:
+        workflow = get_workflow(workflow_id)
+        if not workflow:
+            raise HTTPException(status_code=404, detail="Workflow not found")
+        return workflow
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("Failed to retrieve workflow details: %s", exc)
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to retrieve workflow details. Please try again later."
+        )
 
 
 @app.post("/api/workflows/{workflow_id}/run")
@@ -1378,36 +1592,45 @@ async def export_results(
     if not raw_data:
         raise HTTPException(status_code=400, detail="No data provided")
 
-    dataframe = pl.from_dicts(raw_data)
+    try:
+        dataframe = pl.from_dicts(raw_data)
+        ai_summary = generate_business_insights(cleaning_stats, ml_results)
+        target_column = None
+        if isinstance(ml_results, dict):
+            target_column = ml_results.get("target_column") or ml_results.get("target")
+        pdf_bytes = create_pdf_in_memory(ai_summary, dataframe, target_column=target_column)
+        csv_string = dataframe.write_csv()
 
-    ai_summary = generate_business_insights(cleaning_stats, ml_results)
-    pdf_bytes = create_pdf_in_memory(ai_summary, dataframe)
-    csv_string = dataframe.write_csv()
+        zip_buffer = io.BytesIO()
+        with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
+            zip_file.writestr("cleaned_data.csv", csv_string)
+            zip_file.writestr("AI_Analysis_Report.pdf", pdf_bytes)
+            zip_file.writestr(
+                "analysis_payload.json",
+                json.dumps(
+                    {
+                        "cleaning_stats": cleaning_stats,
+                        "ml_results": ml_results,
+                        "ai_summary": ai_summary,
+                        "pii_sanitized": True,
+                    },
+                    indent=2,
+                    default=str,
+                ),
+            )
 
-    zip_buffer = io.BytesIO()
-    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
-        zip_file.writestr("cleaned_data.csv", csv_string)
-        zip_file.writestr("AI_Analysis_Report.pdf", pdf_bytes)
-        zip_file.writestr(
-            "analysis_payload.json",
-            json.dumps(
-                {
-                    "cleaning_stats": cleaning_stats,
-                    "ml_results": ml_results,
-                    "ai_summary": ai_summary,
-                    "pii_sanitized": True,
-                },
-                indent=2,
-                default=str,
-            ),
+        zip_buffer.seek(0)
+        return StreamingResponse(
+            zip_buffer,
+            media_type="application/zip",
+            headers={"Content-Disposition": "attachment; filename=Analysis_Export.zip"},
         )
-
-    zip_buffer.seek(0)
-    return StreamingResponse(
-        zip_buffer,
-        media_type="application/zip",
-        headers={"Content-Disposition": "attachment; filename=Analysis_Export.zip"},
-    )
+    except Exception as exc:
+        logger.exception("Failed to generate export ZIP: %s", exc)
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to generate results export. Please try again later."
+        )
 
 
 @app.post("/automl")
@@ -1495,7 +1718,7 @@ async def generate_insights(
 @app.post("/api/clean-background")
 async def clean_data_background(
     file: UploadFile = File(...),
-    _: dict = Depends(require_role(["analyst", "admin"])),
+    current_user: dict = Depends(require_role(["analyst", "admin"])),
 ):
     contents = await file.read()
 
@@ -1504,8 +1727,18 @@ async def clean_data_background(
 
     file_b64 = base64.b64encode(contents).decode("utf-8")
     try:
-        task = async_clean_data.delay(file_b64)
+        user_dict = {"username": current_user["username"], "role": current_user["role"]}
+        task = async_clean_data.delay(file_b64, file.filename, user_dict)
+        await broadcast_event({
+            "type": "task:update",
+            "payload": {
+                "task_id": task.id,
+                "status": "started",
+                "payload": {"action": "clean", "file_name": file.filename},
+            },
+        })
     except Exception as exc:
+        logger.exception("Failed to dispatch background clean task")
         raise HTTPException(
             status_code=503,
             detail=(
@@ -1520,7 +1753,7 @@ async def clean_data_background(
 async def predict_background(
     target_column: str = Form(...),
     file: UploadFile = File(...),
-    _: dict = Depends(require_role(["analyst", "admin"])),
+    current_user: dict = Depends(require_role(["analyst", "admin"])),
 ):
     contents = await file.read()
 
@@ -1529,13 +1762,22 @@ async def predict_background(
 
     file_b64 = base64.b64encode(contents).decode("utf-8")
     try:
-        task = async_run_automl.delay(file_b64, target_column)
+        user_dict = {"username": current_user["username"], "role": current_user["role"]}
+        task = async_run_automl.delay(file_b64, file.filename, target_column, user_dict)
+        await broadcast_event({
+            "type": "task:update",
+            "payload": {
+                "task_id": task.id,
+                "status": "started",
+                "payload": {"action": "automl", "target_column": target_column, "file_name": file.filename},
+            },
+        })
     except Exception as exc:
         logger.warning(f"Background worker unavailable, falling back to sync AutoML: {exc}")
         try:
             file_bytes = base64.b64decode(file_b64)
             from connectors import read_dataset_from_bytes
-            dataframe = read_dataset_from_bytes(file_bytes, filename="dataset.csv")
+            dataframe = read_dataset_from_bytes(file_bytes, file.filename)
             ml_result = run_automl_stateless(dataframe, target_column)
             task_id = "sync-" + base64.b64encode(f"{target_column}:{datetime.now(timezone.utc).isoformat()}".encode()).decode()[:16]
             return {
@@ -1544,44 +1786,82 @@ async def predict_background(
                 "sync_result": ml_result,
             }
         except Exception as sync_exc:
+            logger.exception("Sync AutoML fallback failed")
             raise HTTPException(
                 status_code=503,
                 detail=(
-                    "Background worker is unavailable and synchronous fallback also failed: "
-                    f"{str(sync_exc)[:200]}"
+                    "AutoML process failed both in background and fallback modes. "
+                    "Verify target column exists and is valid."
                 ),
             ) from sync_exc
-    return {"task_id": task.id, "message": "AutoML started in background."}
+    return {"task_id": task.id, "message": "AutoML process started in background."}
 
 
 @app.get("/api/task-status/{task_id}")
-def get_task_status(
+async def get_task_status(
     task_id: str,
     _: dict = Depends(require_role(["viewer", "analyst", "admin"])),
 ):
-    task_result = AsyncResult(task_id, app=celery_app)
+    try:
+        task_result = AsyncResult(task_id, app=celery_app)
 
-    if task_result.state == "PENDING":
-        return {"state": task_result.state, "status": "Waiting in queue..."}
+        if task_result.state == "PENDING":
+            return {"state": task_result.state, "status": "Waiting in queue..."}
 
-    if task_result.state in {"STARTED", "PROGRESS"}:
-        info = task_result.info or {}
+        if task_result.state in {"STARTED", "PROGRESS"}:
+            info = task_result.info or {}
+            return {
+                "state": task_result.state,
+                "status": info.get("status", "Processing..."),
+                "progress": info.get("progress", None),
+            }
+
+        if task_result.state == "SUCCESS":
+            payload = {
+                "task_id": task_id,
+                "status": "completed",
+                "payload": task_result.result or {},
+                "ts": datetime.now(timezone.utc).isoformat(),
+            }
+            await broadcast_event({
+                "type": "task:update",
+                "payload": payload
+            })
+            return {"state": task_result.state, "result": task_result.result}
+
+        if task_result.state == "REVOKED":
+            payload = {
+                "task_id": task_id,
+                "status": "revoked",
+                "payload": {"status": "Task was cancelled by user."},
+                "ts": datetime.now(timezone.utc).isoformat(),
+            }
+            await broadcast_event({
+                "type": "task:update",
+                "payload": payload
+            })
+            return {"state": task_result.state, "status": "Task was cancelled by user."}
+
+        payload = {
+            "task_id": task_id,
+            "status": "failed" if task_result.state == "FAILURE" else task_result.state,
+            "payload": {"info": str(task_result.info)},
+            "ts": datetime.now(timezone.utc).isoformat(),
+        }
+        await broadcast_event({
+            "type": "task:update",
+            "payload": payload
+        })
         return {
             "state": task_result.state,
-            "status": info.get("status", "Processing..."),
-            "progress": info.get("progress", None),
+            "status": str(task_result.info),
         }
-
-    if task_result.state == "SUCCESS":
-        return {"state": task_result.state, "result": task_result.result}
-
-    if task_result.state == "REVOKED":
-        return {"state": task_result.state, "status": "Task was cancelled by user."}
-
-    return {
-        "state": task_result.state,
-        "status": str(task_result.info),
-    }
+    except Exception as exc:
+        logger.exception("Failed to query task status: %s", exc)
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to query background task status. Verify connection to task worker."
+        )
 
 
 @app.post("/api/revoke-task/{task_id}")
@@ -1589,8 +1869,15 @@ def revoke_task(
     task_id: str,
     _: dict = Depends(require_role(["analyst", "admin"])),
 ):
-    celery_app.control.revoke(task_id, terminate=True, signal="SIGTERM")
-    return {"message": f"Task {task_id} has been cancelled."}
+    try:
+        celery_app.control.revoke(task_id, terminate=True, signal="SIGTERM")
+        return {"message": f"Task {task_id} has been cancelled."}
+    except Exception as exc:
+        logger.exception("Failed to revoke task: %s", exc)
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to cancel background task. Verify worker status."
+        )
 
 
 @app.post("/api/run-clustering")
@@ -1703,11 +1990,245 @@ async def explain_automl(
 
 @app.get("/api/admin-stats")
 async def admin_stats(_: dict = Depends(require_role(["admin"]))):
-    return {
-        "status": "ok",
-        "message": "Welcome Admin",
-        "capabilities": ["user_management", "system_configuration", "audit_access"],
-    }
+    try:
+        return {
+            "status": "ok",
+            "message": "Welcome Admin",
+            "capabilities": ["user_management", "system_configuration", "audit_access"],
+        }
+    except Exception as exc:
+        logger.exception("Admin stats check failed: %s", exc)
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to retrieve admin statistics."
+        )
+
+
+@app.post("/api/data-insights")
+async def data_insights(
+    payload: dict = Body(...),
+    _: dict = Depends(require_role(["viewer", "analyst", "admin"])),
+):
+    """Generate comprehensive data insights from uploaded dataset rows."""
+    try:
+        rows = payload.get("rows", [])
+        if not rows:
+            raise HTTPException(status_code=400, detail="No data provided for insights")
+
+        df = pl.from_dicts(rows)
+        total_rows = df.height
+        total_cols = df.width
+
+        # ── 1. Column-level statistics ──
+        column_stats = []
+        numeric_cols = []
+        categorical_cols = []
+
+        for col_name in df.columns:
+            col = df[col_name]
+            dtype_str = str(col.dtype)
+            null_count = col.null_count()
+            null_pct = round((null_count / total_rows) * 100, 2) if total_rows > 0 else 0
+            unique_count = col.n_unique()
+
+            stat = {
+                "name": col_name,
+                "dtype": dtype_str,
+                "null_count": int(null_count),
+                "null_pct": null_pct,
+                "unique_count": int(unique_count),
+                "completeness": round(100 - null_pct, 2),
+            }
+
+            # Check if numeric
+            is_numeric = col.dtype in (pl.Float32, pl.Float64, pl.Int8, pl.Int16, pl.Int32, pl.Int64, pl.UInt8, pl.UInt16, pl.UInt32, pl.UInt64)
+
+            if not is_numeric:
+                # Try casting string to numeric
+                try:
+                    casted = col.cast(pl.Float64, strict=False).drop_nulls()
+                    if casted.len() > total_rows * 0.5:  # >50% are numeric
+                        is_numeric = True
+                        col = casted
+                except Exception:
+                    pass
+
+            if is_numeric:
+                numeric_cols.append(col_name)
+                try:
+                    num_col = col.cast(pl.Float64, strict=False).drop_nulls()
+                    if num_col.len() > 0:
+                        stat["mean"] = round(float(num_col.mean()), 4)
+                        stat["median"] = round(float(num_col.median()), 4)
+                        stat["std"] = round(float(num_col.std()), 4) if num_col.len() > 1 else 0
+                        stat["min"] = round(float(num_col.min()), 4)
+                        stat["max"] = round(float(num_col.max()), 4)
+                        q1 = float(num_col.quantile(0.25))
+                        q3 = float(num_col.quantile(0.75))
+                        iqr = q3 - q1
+                        lower = q1 - 1.5 * iqr
+                        upper = q3 + 1.5 * iqr
+                        outlier_count = int(num_col.filter((num_col < lower) | (num_col > upper)).len())
+                        stat["q1"] = round(q1, 4)
+                        stat["q3"] = round(q3, 4)
+                        stat["iqr"] = round(iqr, 4)
+                        stat["outlier_count"] = outlier_count
+                        stat["outlier_pct"] = round((outlier_count / num_col.len()) * 100, 2) if num_col.len() > 0 else 0
+                        stat["type"] = "numeric"
+
+                        # Histogram bins (5 buckets)
+                        try:
+                            mn, mx = float(num_col.min()), float(num_col.max())
+                            if mn < mx:
+                                step = (mx - mn) / 5
+                                bins = []
+                                for i in range(5):
+                                    lo = mn + i * step
+                                    hi = mn + (i + 1) * step
+                                    cnt = int(num_col.filter((num_col >= lo) & (num_col < hi)).len()) if i < 4 else int(num_col.filter((num_col >= lo) & (num_col <= hi)).len())
+                                    bins.append({"range": f"{lo:.1f}-{hi:.1f}", "count": cnt})
+                                stat["distribution"] = bins
+                        except Exception:
+                            pass
+                except Exception:
+                    stat["type"] = "numeric"
+            else:
+                categorical_cols.append(col_name)
+                stat["type"] = "categorical"
+                # Top 5 values
+                try:
+                    vc = col.drop_nulls().cast(pl.Utf8).value_counts(sort=True)
+                    top5 = vc.head(5).to_dicts()
+                    stat["top_values"] = [{"value": str(r.get(col_name, r.get("value", ""))), "count": int(r.get("count", r.get("counts", 0)))} for r in top5]
+                except Exception:
+                    stat["top_values"] = []
+
+            column_stats.append(stat)
+
+        # ── 2. Data type distribution ──
+        type_counts = {}
+        for s in column_stats:
+            t = s.get("type", "other")
+            type_counts[t] = type_counts.get(t, 0) + 1
+
+        # ── 3. Correlation matrix (top numeric columns, max 10) ──
+        correlation_data = []
+        top_numeric = numeric_cols[:10]
+        if len(top_numeric) >= 2:
+            try:
+                num_df = df.select([pl.col(c).cast(pl.Float64, strict=False) for c in top_numeric]).drop_nulls()
+                if num_df.height > 2:
+                    for i, c1 in enumerate(top_numeric):
+                        for j, c2 in enumerate(top_numeric):
+                            if i < j:
+                                try:
+                                    corr_val = float(num_df[c1].pearson_corr(num_df[c2]))
+                                    if abs(corr_val) > 0.3:
+                                        correlation_data.append({
+                                            "col1": c1, "col2": c2,
+                                            "correlation": round(corr_val, 4),
+                                            "strength": "Strong" if abs(corr_val) > 0.7 else "Moderate"
+                                        })
+                                except Exception:
+                                    pass
+            except Exception:
+                pass
+
+        # Sort by absolute correlation
+        correlation_data.sort(key=lambda x: abs(x["correlation"]), reverse=True)
+
+        # ── 4. Missing data summary ──
+        missing_cols = [s for s in column_stats if s["null_count"] > 0]
+        missing_cols.sort(key=lambda x: x["null_pct"], reverse=True)
+        total_null_cells = sum(s["null_count"] for s in column_stats)
+        total_cells = total_rows * total_cols
+
+        # ── 5. Duplicate detection ──
+        dup_count = int(df.filter(df.is_duplicated()).height)
+
+        # ── 6. Auto-generated key findings ──
+        findings = []
+
+        # Data size
+        findings.append({
+            "type": "info",
+            "title": "Dataset Size",
+            "detail": f"{total_rows:,} rows × {total_cols} columns ({total_rows * total_cols:,} total cells)"
+        })
+
+        # Missing data
+        if total_null_cells > 0:
+            miss_pct = round((total_null_cells / total_cells) * 100, 2)
+            severity = "warning" if miss_pct > 5 else "info"
+            findings.append({
+                "type": severity,
+                "title": "Missing Data",
+                "detail": f"{total_null_cells:,} missing cells ({miss_pct}%) across {len(missing_cols)} column(s)"
+            })
+        else:
+            findings.append({"type": "success", "title": "No Missing Data", "detail": "All cells are complete — excellent data quality"})
+
+        # Duplicates
+        if dup_count > 0:
+            findings.append({
+                "type": "warning",
+                "title": "Duplicate Rows",
+                "detail": f"{dup_count:,} duplicate rows found ({round(dup_count/total_rows*100,1)}%)"
+            })
+        else:
+            findings.append({"type": "success", "title": "No Duplicates", "detail": "All rows are unique"})
+
+        # Outliers
+        total_outliers = sum(s.get("outlier_count", 0) for s in column_stats)
+        if total_outliers > 0:
+            findings.append({
+                "type": "warning",
+                "title": "Outliers Detected",
+                "detail": f"{total_outliers:,} outlier values across numeric columns (IQR method)"
+            })
+
+        # Strong correlations
+        strong_corrs = [c for c in correlation_data if abs(c["correlation"]) > 0.7]
+        if strong_corrs:
+            pairs = ", ".join([f"{c['col1']}↔{c['col2']} ({c['correlation']:.2f})" for c in strong_corrs[:3]])
+            findings.append({
+                "type": "info",
+                "title": "Strong Correlations",
+                "detail": f"Found {len(strong_corrs)} strongly correlated pair(s): {pairs}"
+            })
+
+        # High cardinality categoricals
+        high_card = [s for s in column_stats if s.get("type") == "categorical" and s["unique_count"] > total_rows * 0.5]
+        if high_card:
+            findings.append({
+                "type": "info",
+                "title": "High Cardinality",
+                "detail": f"{len(high_card)} categorical column(s) have >50% unique values: {', '.join(c['name'] for c in high_card[:3])}"
+            })
+
+        return {
+            "status": "success",
+            "overview": {
+                "total_rows": total_rows,
+                "total_cols": total_cols,
+                "total_cells": total_cells,
+                "total_null_cells": total_null_cells,
+                "null_pct": round((total_null_cells / total_cells) * 100, 2) if total_cells > 0 else 0,
+                "duplicate_rows": dup_count,
+                "numeric_cols": len(numeric_cols),
+                "categorical_cols": len(categorical_cols),
+            },
+            "column_stats": column_stats,
+            "type_distribution": type_counts,
+            "correlations": correlation_data[:20],
+            "missing_summary": [{"name": c["name"], "null_count": c["null_count"], "null_pct": c["null_pct"]} for c in missing_cols[:20]],
+            "findings": findings,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Data insights generation failed: %s", e)
+        raise HTTPException(status_code=500, detail=f"Insights generation failed: {str(e)}")
 
 
 if __name__ == "__main__":

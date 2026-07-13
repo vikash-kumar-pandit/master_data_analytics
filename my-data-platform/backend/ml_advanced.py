@@ -32,10 +32,17 @@ def run_nocode_clustering(dataframe: pl.DataFrame, num_clusters: int = 3) -> pl.
     if dataframe.is_empty():
         raise ValueError("Input data is empty")
 
+    # Lazy import pycaret clustering utilities to enable test patching
+    import importlib
     try:
-        from pycaret.clustering import assign_model, create_model, setup as cluster_setup
+        cluster_mod = importlib.import_module("pycaret.clustering")
+        assign_model = getattr(cluster_mod, "assign_model")
+        create_model = getattr(cluster_mod, "create_model")
+        cluster_setup = getattr(cluster_mod, "setup")
     except ImportError as exc:
-        raise ImportError("PyCaret is not installed. Install it with `pip install pycaret`.") from exc
+        raise ImportError(
+            "PyCaret is not installed. Install it with `pip install pycaret`."
+        ) from exc
 
     pandas_df = dataframe.to_pandas()
     cluster_setup(data=pandas_df, normalize=True, session_id=123, verbose=False, html=False)

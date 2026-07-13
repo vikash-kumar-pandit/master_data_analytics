@@ -1,3 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 :root {
   --font-primary: "Plus Jakarta Sans", "Manrope", "Segoe UI", sans-serif;
   --text-main: #122035;

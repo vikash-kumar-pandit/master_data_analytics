@@ -1,120 +1,87 @@
-from __future__ import annotations
+import uuid
+import datetime
+from datetime import datetime as dt, timezone
+from database import SessionLocal
+from models import CatalogItem
+from activity_tracker import track_activity
 
-import hashlib
-import json
-from datetime import datetime, timezone
-from pathlib import Path
-from threading import Lock
-from typing import Any
-from uuid import uuid4
+def _make_json_serializable(data):
+    if isinstance(data, dict):
+        return {k: _make_json_serializable(v) for k, v in data.items()}
+    elif isinstance(data, list):
+        return [_make_json_serializable(item) for item in data]
+    elif isinstance(data, (datetime.date, datetime.datetime)):
+        return data.isoformat()
+    return data
 
-CATALOG_PATH = Path(__file__).resolve().parent / "data" / "catalog.json"
-CATALOG_PATH.parent.mkdir(parents=True, exist_ok=True)
-CATALOG_LOCK = Lock()
+def register_catalog_entry(action: str, dataset_name: str | None, analysis: dict, rows: list, source: str, created_by: dict, **kwargs):
+    username = created_by.get("username", "system")
+    ml_results = kwargs.get("ml_results", {})
 
+    with SessionLocal() as db:
+        new_item = CatalogItem(
+            id=str(uuid.uuid4()),
+            name=dataset_name or f"Result_{action}_{dt.now().strftime('%Y%m%d%H%M')}",
+            type=action,
+            owner=username,
+            visibility="private",
+            summary=_make_json_serializable(analysis),
+            preview_data=_make_json_serializable(rows[:50]) if rows else [],
+            ml_results=_make_json_serializable(ml_results)
+        )
+        db.add(new_item)
+        db.commit()
+        item_id = new_item.id
+        item_name = new_item.name
 
-def _load_catalog() -> list[dict[str, Any]]:
-    if not CATALOG_PATH.exists():
-        return []
+    track_activity(
+        username=username,
+        action=action,
+        resource=dataset_name,
+        metadata_info={"source": source, "rows_processed": len(rows) if rows else 0}
+    )
+    return {"id": item_id, "name": item_name}
 
-    try:
-        return json.loads(CATALOG_PATH.read_text(encoding="utf-8"))
-    except Exception:
-        return []
+def get_catalog_entry(entry_id: str) -> dict | None:
+    with SessionLocal() as db:
+        item = db.query(CatalogItem).filter(CatalogItem.id == entry_id).first()
+        if not item:
+            return None
+        return {
+            "id": item.id,
+            "name": item.name,
+            "type": item.type,
+            "owner": item.owner,
+            "visibility": item.visibility,
+            "summary": item.summary,
+            "preview_data": item.preview_data,
+            "ml_results": item.ml_results,
+            "created_at": item.created_at.isoformat() if item.created_at else None
+        }
 
+def list_catalog_entries_for_user(user: dict, limit: int = 20) -> list[dict]:
+    username = user.get("username")
+    role = user.get("role")
+    
+    with SessionLocal() as db:
+        query = db.query(CatalogItem)
+        if role != "admin":
+            query = query.filter(CatalogItem.owner == username)
+            
+        items = query.order_by(CatalogItem.created_at.desc()).limit(limit).all()
+        
+        return [{
+            "id": item.id,
+            "name": item.name,
+            "type": item.type,
+            "owner": item.owner,
+            "visibility": item.visibility,
+            "summary": item.summary,
+            "ml_results": item.ml_results,
+            "created_at": item.created_at.isoformat() if item.created_at else None
+        } for item in items]
 
-def _write_catalog(entries: list[dict[str, Any]]) -> None:
-    CATALOG_PATH.write_text(json.dumps(entries, indent=2, default=str), encoding="utf-8")
-
-
-def make_dataset_fingerprint(rows: list[dict[str, Any]] | None, metadata: dict[str, Any] | None = None) -> str:
-    payload = {
-        "rows": rows[:5] if rows else [],
-        "metadata": metadata or {},
-    }
-    digest = hashlib.sha256(json.dumps(payload, sort_keys=True, default=str).encode("utf-8")).hexdigest()
-    return digest
-
-
-def register_catalog_entry(
-    *,
-    action: str,
-    dataset_name: str | None,
-    analysis: dict[str, Any] | None = None,
-    cleaning_stats: list[dict[str, Any]] | None = None,
-    ml_results: dict[str, Any] | None = None,
-    rows: list[dict[str, Any]] | None = None,
-    target_column: str | None = None,
-    source: str | None = None,
-    created_by: dict[str, Any] | None = None,
-) -> dict[str, Any]:
-    analysis = analysis or {}
-    actor = {
-        "username": (created_by or {}).get("username"),
-        "role": (created_by or {}).get("role"),
-    }
-    metadata = {
-        "action": action,
-        "dataset_name": dataset_name,
-        "rows": analysis.get("rows") or (len(rows) if rows else 0),
-        "cols": analysis.get("cols") or (len(rows[0]) if rows else 0),
-        "domain": (analysis.get("domain_info") or {}).get("domain") if isinstance(analysis.get("domain_info"), dict) else None,
-        "target_column": target_column,
-        "source": source,
-        "owner": actor.get("username"),
-    }
-
-    entry = {
-        "id": str(uuid4()),
-        "created_at": datetime.now(timezone.utc).isoformat(),
-        "fingerprint": make_dataset_fingerprint(rows, metadata),
-        "dataset_name": dataset_name,
-        "action": action,
-        "source": source,
-        "target_column": target_column,
-        "created_by": actor,
-        "summary": metadata,
-        "analysis": analysis,
-        "cleaning_stats": cleaning_stats or [],
-        "ml_results": ml_results or {},
-    }
-
-    with CATALOG_LOCK:
-        entries = _load_catalog()
-        entries.append(entry)
-        _write_catalog(entries)
-
-    return entry
-
-
-def list_catalog_entries(limit: int = 20) -> list[dict[str, Any]]:
-    with CATALOG_LOCK:
-        entries = _load_catalog()
-    return list(reversed(entries))[:limit]
-
-
-def get_catalog_entry(entry_id: str) -> dict[str, Any] | None:
-    with CATALOG_LOCK:
-        entries = _load_catalog()
-    for entry in entries:
-        if entry.get("id") == entry_id:
-            return entry
-    return None
-
-
-def is_catalog_entry_visible(entry: dict[str, Any], current_user: dict[str, Any]) -> bool:
-    if current_user.get("role") == "admin":
+def is_catalog_entry_visible(entry: dict, user: dict) -> bool:
+    if user.get("role") == "admin":
         return True
-
-    owner_username = ((entry.get("created_by") or {}).get("username") or "").strip()
-    if not owner_username:
-        # Legacy entries without ownership metadata are restricted to admins.
-        return False
-
-    return owner_username == current_user.get("username")
-
-
-def list_catalog_entries_for_user(current_user: dict[str, Any], limit: int = 20) -> list[dict[str, Any]]:
-    entries = list_catalog_entries(limit=max(limit, 1) * 5)
-    visible = [entry for entry in entries if is_catalog_entry_visible(entry, current_user)]
-    return visible[: max(1, limit)]
+    return entry.get("owner") == user.get("username")

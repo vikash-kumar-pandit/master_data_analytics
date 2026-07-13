@@ -30,8 +30,9 @@ from observability import RATE_LIMIT_STATE, RATE_LIMITS
 client = TestClient(app)
 
 # ── credentials ──────────────────────────────────────────────────────────────
-ADMIN_USERNAME = "Vikash_24a12res1159@iitp.ac.in"
-ADMIN_PASSWORD = "Vikashkumarpandit1159@gmail.com"
+import os
+ADMIN_USERNAME = os.getenv("TEST_ADMIN_USERNAME", "Vikash_24a12res1159@iitp.ac.in")
+ADMIN_PASSWORD = os.getenv("TEST_ADMIN_PASSWORD", "Vikashkumarpandit1159@gmail.com")
 
 
 # ── helpers ───────────────────────────────────────────────────────────────────

@@ -11,11 +11,18 @@ const apiClient = axios.create({
   },
 });
 
-// Request interceptor
 apiClient.interceptors.request.use(
   (config) => {
     // Add auth token if available
-    const token = localStorage.getItem('auth_token');
+    let token = null;
+    try {
+      const raw = sessionStorage.getItem('my_data_platform_auth') || localStorage.getItem('my_data_platform_auth');
+      if (raw) {
+        token = JSON.parse(raw)?.token;
+      }
+    } catch (e) {
+      console.error("Error parsing token in apiClient", e);
+    }
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -35,7 +42,8 @@ apiClient.interceptors.response.use(
     // Handle common errors
     if (error.response?.status === 401) {
       // Redirect to login
-      localStorage.removeItem('auth_token');
+      sessionStorage.removeItem('my_data_platform_auth');
+      localStorage.removeItem('my_data_platform_auth');
       window.location.href = '/login';
     }
 
@@ -158,25 +166,25 @@ export const apiService = {
   },
   // Generate structured report (PDF/PPTX) and return blob
   generateStructuredReport: (payload, outputFormat = 'pdf') => {
-    return apiClient.post('/api/analytics/report', { ...payload, output_format: outputFormat }, { responseType: 'blob' });
+    return apiClient.post('/analytics/report', { ...payload, output_format: outputFormat }, { responseType: 'blob' });
   },
   // Data quality endpoints
   quality: {
-    getReport: (payload) => apiClient.post('/api/quality/report', payload),
-    getScore: (payload) => apiClient.post('/api/quality/score', payload),
+    getReport: (payload) => apiClient.post('/quality/report', payload),
+    getScore: (payload) => apiClient.post('/quality/score', payload),
   },
   // Forecast / predictive endpoints
   forecasting: {
-    forecast: (payload) => apiClient.post('/api/analytics/forecast', payload),
+    forecast: (payload) => apiClient.post('/analytics/forecast', payload),
   },
   // Scheduling endpoints
   schedule: {
-    create: (payload) => apiClient.post('/api/schedule/create', payload),
-    list: () => apiClient.get('/api/schedule/list'),
+    create: (payload) => apiClient.post('/schedule/create', payload),
+    list: () => apiClient.post('/schedule/list'),
   },
   // Real-time insights helper (WebSocket wrapper)
   realtime: {
-    connectInsights: ({ onMessage, onOpen, onClose, onError, path = '/ws/insights' } = {}) => {
+    connectInsights: ({ onMessage, onOpen, onClose, onError, path = '/ws' } = {}) => {
       try {
         const wsBase = (import.meta.env.VITE_WS_URL || API_BASE_URL.replace(/^http/, 'ws').replace(/\/api\/?$/, ''));
         const url = wsBase.endsWith('/') ? `${wsBase.slice(0, -1)}${path}` : `${wsBase}${path}`;

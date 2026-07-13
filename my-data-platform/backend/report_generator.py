@@ -1,189 +1,591 @@
+import os
 import io
+import json
+import base64
 import logging
+import re
+from datetime import datetime
+from typing import Any
+
+# Add GTK+ DLL directory for WeasyPrint on Windows
+if os.name == 'nt':
+    for sd in [
+        r"C:\Program Files\GTK3-Runtime Win64\bin",
+        r"C:\Program Files\GTK3-Runtime\bin",
+        r"C:\Program Files (x86)\GTK3-Runtime Win64\bin",
+        r"C:\Program Files (x86)\GTK3-Runtime\bin",
+    ]:
+        if os.path.exists(sd):
+            try:
+                os.add_dll_directory(sd)
+                break
+            except Exception:
+                pass
+
 import polars as pl
-from fpdf import FPDF
 from pptx import Presentation
 from pptx.util import Inches, Pt
+from pptx.dml.color import RGBColor
+from pptx.enum.text import PP_ALIGN
+from weasyprint import HTML
+from pdf_generator import (
+    markdown_to_html,
+    generate_distribution_base64,
+    generate_correlation_matrix_base64,
+    generate_ml_visualization_base64
+)
 
 logger = logging.getLogger(__name__)
 
 
-def _pdf_output_bytes(pdf: FPDF) -> bytes:
-    output = pdf.output()
-    if isinstance(output, bytes):
-        return output
-    if isinstance(output, bytearray):
-        return bytes(output)
-    if isinstance(output, str):
-        return output.encode("latin-1", errors="ignore")
-    return bytes(output)
-
-
-class PDFTable(FPDF):
-    def header(self):
-        try:
-            self.set_font("Helvetica", "B", 16)
-            title = getattr(self, "report_title", "Data Analysis Report")
-            safe_title = str(title)[:100]  # Limit title length
-            self.cell(0, 10, safe_title, border=False, align="C")
-            self.ln(10)
-        except Exception as e:
-            logger.error(f"Error in PDF header: {e}")
-
-
 def generate_pdf_in_memory(dataframe: pl.DataFrame, analysis_summary: dict) -> bytes:
-    """Generate PDF with error handling."""
+    """Generate WeasyPrint PDF for a dataset with dynamic profiling plots, ML metrics, and visualizations."""
     try:
         if dataframe is None:
             dataframe = pl.DataFrame()
         if analysis_summary is None:
             analysis_summary = {}
+
+        total_rows = analysis_summary.get('rows', dataframe.height)
+        total_cols = analysis_summary.get('cols', dataframe.width)
+        category = analysis_summary.get('category', 'Generic Data')
         
-        pdf = PDFTable()
-        pdf.set_auto_page_break(auto=True, margin=15)
-        pdf.add_page()
-
-        pdf.set_font("Helvetica", "B", 14)
-        pdf.cell(0, 10, "Data Analysis Report", border=False, align="C")
-        pdf.ln(12)
-
-        pdf.set_font("Helvetica", size=11)
-        rows_count = analysis_summary.get('rows', 0)
-        category = str(analysis_summary.get('category', 'Unknown'))[:50]
-        cols_count = analysis_summary.get('cols', 0)
+        # Extract AI insights & AutoML results
+        ai_insights = analysis_summary.get('ai_insights', '')
+        automl = analysis_summary.get('automl', None)
         
-        pdf.cell(0, 8, f"Total Rows Processed: {rows_count}")
-        pdf.ln(6)
-        pdf.cell(0, 8, f"Data Category Detected: {category}")
-        pdf.ln(6)
-        pdf.cell(0, 8, f"Columns Detected: {cols_count}")
-        pdf.ln(10)
+        formatted_insights = markdown_to_html(ai_insights) if ai_insights else ""
         
-        sample_dataframe = dataframe.head(20)
+        # Check target column to trigger ML visualization plot
+        target_column = None
+        if isinstance(automl, dict):
+            target_column = automl.get("target_column") or automl.get("target")
+        
+        # Columns metadata
+        columns_meta = []
+        for name, dtype in zip(dataframe.columns, dataframe.dtypes):
+            null_count = dataframe[name].null_count()
+            null_pct = (null_count / dataframe.height * 100) if dataframe.height > 0 else 0
+            columns_meta.append({
+                "name": name,
+                "type": str(dtype),
+                "null_pct": f"{null_pct:.1f}%",
+                "non_null": dataframe.height - null_count
+            })
 
-        if sample_dataframe.columns and sample_dataframe.height > 0:
-            try:
-                column_count = len(sample_dataframe.columns)
-                if column_count > 0:
-                    col_width = max(5, pdf.epw / column_count)
+        # Generate plots
+        dist_img = generate_distribution_base64(dataframe)
+        corr_img = generate_correlation_matrix_base64(dataframe)
+        ml_img = generate_ml_visualization_base64(dataframe, target_column) if target_column else ""
+        
+        # Sample dataset observations
+        sample_df = dataframe.head(10)
+        sample_headers = sample_df.columns
+        sample_rows = sample_df.iter_rows()
+        
+        generation_time = datetime.now().strftime("%B %d, %Y at %I:%M %p")
+        
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <title>Data Analysis Report</title>
+            <style>
+                @page {{
+                    size: A4;
+                    margin: 20mm;
+                    @bottom-right {{
+                        content: "Page " counter(page) " of " counter(pages);
+                        font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+                        font-size: 8pt;
+                        color: #718096;
+                    }}
+                    @bottom-left {{
+                        content: "DataSaaS Pro Analytics System • Execution Telemetry";
+                        font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+                        font-size: 8pt;
+                        color: #718096;
+                    }}
+                }}
+                body {{
+                    font-family: 'Georgia', 'Times New Roman', serif;
+                    color: #2d3748;
+                    line-height: 1.6;
+                    font-size: 10.5pt;
+                }}
+                header {{
+                    border-bottom: 2px solid #2b6cb0;
+                    padding-bottom: 12px;
+                    margin-bottom: 25px;
+                }}
+                .report-title {{
+                    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+                    color: #1a365d;
+                    font-size: 22pt;
+                    font-weight: 800;
+                    margin: 0 0 5px 0;
+                    letter-spacing: -0.5px;
+                    text-transform: uppercase;
+                }}
+                .report-subtitle {{
+                    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+                    color: #4a5568;
+                    font-size: 11pt;
+                    margin: 0;
+                    font-weight: 400;
+                }}
+                .metadata-grid {{
+                    display: table;
+                    width: 100%;
+                    margin-bottom: 25px;
+                    background-color: #f7fafc;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 6px;
+                    border-collapse: collapse;
+                }}
+                .metadata-row {{
+                    display: table-row;
+                }}
+                .metadata-cell {{
+                    display: table-cell;
+                    padding: 8px 12px;
+                    font-size: 9pt;
+                    border: 1px solid #e2e8f0;
+                }}
+                .metadata-label {{
+                    font-weight: bold;
+                    color: #4a5568;
+                    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+                    background-color: #edf2f7;
+                    width: 25%;
+                }}
+                h2 {{
+                    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+                    color: #2b6cb0;
+                    font-size: 13pt;
+                    margin-top: 25px;
+                    margin-bottom: 12px;
+                    border-bottom: 1px solid #e2e8f0;
+                    padding-bottom: 5px;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                }}
+                p {{
+                    margin-bottom: 15px;
+                    text-align: justify;
+                }}
+                .section-container {{
+                    page-break-inside: avoid;
+                    margin-bottom: 25px;
+                }}
+                .data-table {{
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-top: 10px;
+                    margin-bottom: 20px;
+                    font-size: 8.5pt;
+                }}
+                .data-table th {{
+                    background-color: #2b6cb0;
+                    color: white;
+                    font-weight: bold;
+                    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+                    text-align: left;
+                    padding: 6px 8px;
+                    border: 1px solid #cbd5e0;
+                }}
+                .data-table td {{
+                    padding: 5px 8px;
+                    border: 1px solid #e2e8f0;
+                    font-family: monospace;
+                }}
+                .data-table tr:nth-child(even) {{
+                    background-color: #f7fafc;
+                }}
+                .chart-container {{
+                    display: table;
+                    width: 100%;
+                    margin: 20px 0;
+                    page-break-inside: avoid;
+                }}
+                .chart-box {{
+                    display: table-cell;
+                    width: 50%;
+                    padding: 5px;
+                    text-align: center;
+                    vertical-align: middle;
+                }}
+                .chart-img {{
+                    max-width: 95%;
+                    border: 1px solid #e2e8f0;
+                    box-shadow: 0 4px 6px rgba(0,0,0,0.04);
+                }}
+                .insights-callout {{
+                    background-color: #ebf8ff;
+                    border-left: 4px solid #3182ce;
+                    padding: 15px;
+                    border-radius: 0 6px 6px 0;
+                    margin: 20px 0;
+                }}
+                .insights-title {{
+                    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+                    font-weight: bold;
+                    color: #2b6cb0;
+                    margin-bottom: 8px;
+                    font-size: 11pt;
+                }}
+            </style>
+        </head>
+        <body>
+            <header>
+                <h1 class="report-title">Exploratory Data Analysis Report</h1>
+                <p class="report-subtitle">Systematic Dataset Profiling & AutoML Summary</p>
+            </header>
 
-                    pdf.set_font("Helvetica", "B", 9)
-                    for column_name in sample_dataframe.columns:
-                        safe_col = str(column_name)[:50]
-                        pdf.cell(col_width, 8, safe_col, border=1, align="C")
-                    pdf.ln(8)
-
-                    pdf.set_font("Helvetica", size=9)
-                    for values in sample_dataframe.iter_rows():
-                        for value in values:
-                            safe_value = str(value)[:100]
-                            pdf.cell(col_width, 7, safe_value, border=1)
-                        pdf.ln(7)
-            except Exception as e:
-                logger.error(f"Error adding table to PDF: {e}")
-                pdf.set_font("Helvetica", size=10)
-                pdf.cell(0, 10, f"Error rendering table: {str(e)[:100]}")
-        else:
-            pdf.set_font("Helvetica", size=10)
-            pdf.cell(0, 10, "No tabular columns were available to render.")
-
-        try:
-            return _pdf_output_bytes(pdf)
-        except Exception as e:
-            logger.error(f"Error outputting PDF: {e}")
-            return b"%PDF-1.4\n%EOF"
-    
+            <div class="metadata-grid">
+                <div class="metadata-row">
+                    <div class="metadata-cell metadata-label">Generated On</div>
+                    <div class="metadata-cell">{generation_time}</div>
+                    <div class="metadata-cell metadata-label">Data Dimension</div>
+                    <div class="metadata-cell">{total_rows} Rows x {total_cols} Columns</div>
+                </div>
+                <div class="metadata-row">
+                    <div class="metadata-cell metadata-label">Category Detected</div>
+                    <div class="metadata-cell">{category}</div>
+                    <div class="metadata-cell metadata-label">Sanitization</div>
+                    <div class="metadata-cell">PII Masks Active</div>
+                </div>
+            </div>
+        """
+        
+        if formatted_insights:
+            html_content += f"""
+            <div class="section-container">
+                <h2>1. Executive Summary & Business Insights</h2>
+                <div class="insights-callout">
+                    <div class="insights-title">AI Analytics Insights</div>
+                    {formatted_insights}
+                </div>
+            </div>
+            """
+            
+        if automl:
+            html_content += f"""
+            <div class="section-container">
+                <h2>2. Automated Machine Learning Predictions</h2>
+                <div class="insights-callout" style="background-color: #f0fff4; border-left: 4px solid #38a169;">
+                    <div class="insights-title" style="color: #276749;">AutoML Summary Report</div>
+                    <p><strong>Target Column:</strong> {target_column or 'N/A'}</p>
+                    <p><strong>Recommended Estimator:</strong> {automl.get('best_algorithm') or automl.get('model_name', 'N/A')}</p>
+                    <p><strong>Model Performance Metrics:</strong></p>
+                    <ul>
+                        <li>R2 Accuracy Score: {automl.get('r2') or automl.get('r2_score', 'N/A')}</li>
+                        <li>Mean Absolute Error (MAE): {automl.get('mae', 'N/A')}</li>
+                        <li>Root Mean Squared Error (RMSE): {automl.get('rmse', 'N/A')}</li>
+                    </ul>
+                </div>
+            </div>
+            """
+            
+        html_content += f"""
+            <div class="section-container">
+                <h2>3. Columns Completeness Profiles</h2>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Column Name</th>
+                            <th>Data Type</th>
+                            <th>Completeness Count</th>
+                            <th>Null Percentage</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        """
+        
+        for col in columns_meta:
+            html_content += f"""
+                        <tr>
+                            <td>{col['name']}</td>
+                            <td>{col['type']}</td>
+                            <td>{col['non_null']} / {dataframe.height}</td>
+                            <td>{col['null_pct']}</td>
+                        </tr>
+            """
+            
+        html_content += """
+                    </tbody>
+                </table>
+            </div>
+        """
+        
+        if dist_img or corr_img:
+            html_content += """
+            <div class="section-container">
+                <h2>4. Dynamic Plots</h2>
+                <div class="chart-container">
+            """
+            if dist_img:
+                html_content += f"""
+                    <div class="chart-box">
+                        <img class="chart-img" src="data:image/png;base64,{dist_img}" alt="Distribution Profile"/>
+                    </div>
+                """
+            if corr_img:
+                html_content += f"""
+                    <div class="chart-box">
+                        <img class="chart-img" src="data:image/png;base64,{corr_img}" alt="Correlation Heatmap"/>
+                    </div>
+                """
+            html_content += """
+                </div>
+            </div>
+            """
+            
+        if ml_img:
+            html_content += f"""
+            <div class="section-container" style="page-break-before: always;">
+                <h2>5. Machine Learning Visualizations</h2>
+                <p>Performance profile and learning curve mapping of Random Forest model trained on <strong>{target_column}</strong>:</p>
+                <div class="chart-container" style="text-align: center;">
+                    <img class="chart-img" style="max-width: 80%;" src="data:image/png;base64,{ml_img}" alt="ML Performance Graph"/>
+                </div>
+            </div>
+            """
+            
+        if dataframe.height > 0:
+            html_content += f"""
+            <div class="section-container" style="page-break-before: always;">
+                <h2>{6 if ml_img else 5}. Sample Dataset Observations (First 10 Rows)</h2>
+                <table class="data-table" style="font-size: 7.5pt;">
+                    <thead>
+                        <tr>
+            """
+            for head in sample_headers:
+                html_content += f"<th>{head}</th>"
+            html_content += """
+                        </tr>
+                    </thead>
+                    <tbody>
+            """
+            for row in sample_rows:
+                html_content += "<tr>"
+                for item in row:
+                    safe_item = str(item or "")
+                    if len(safe_item) > 25:
+                        safe_item = safe_item[:22] + "..."
+                    html_content += f"<td>{safe_item}</td>"
+                html_content += "</tr>"
+            html_content += """
+                    </tbody>
+                </table>
+            </div>
+            """
+            
+        html_content += """
+        </body>
+        </html>
+        """
+        
+        return HTML(string=html_content).write_pdf()
+        
     except Exception as e:
-        logger.exception(f"Failed to generate PDF: {e}")
+        logger.exception(f"Failed to generate WeasyPrint PDF in memory: {e}")
         return b"%PDF-1.4\n%EOF"
 
 
 def generate_structured_report_pdf(*, title: str, subtitle: str, sections: list[dict]) -> bytes:
-    """Generate structured PDF report with error handling."""
+    """Generate structured PDF report with WeasyPrint from layout section data with dynamic colors based on keywords in title."""
     try:
-        if not isinstance(title, str):
-            title = str(title or "Report")
-        if not isinstance(subtitle, str):
-            subtitle = str(subtitle or "")
-        if sections is None:
-            sections = []
-        if not isinstance(sections, list):
-            sections = []
+        title = title or "Report"
+        subtitle = subtitle or ""
+        sections = sections or []
         
-        validated_sections = []
-        for section in sections:
-            if isinstance(section, dict):
-                validated_sections.append(section)
-        
-        pdf = PDFTable()
-        pdf.report_title = title
-        pdf.set_auto_page_break(auto=True, margin=15)
-        pdf.add_page()
-
-        try:
-            pdf.set_font("Helvetica", "B", 16)
-            safe_title = str(title)[:100]
-            pdf.cell(0, 10, safe_title, border=False, align="C")
-            pdf.ln(8)
+        # Determine theme based on title keywords
+        title_lower = title.lower()
+        if "quality" in title_lower:
+            theme_color = "#276749"  # Emerald/Forest Green
+            bg_light = "#f0fff4"
+            border_color = "#c6f6d5"
+            accent_color = "#38a169"
+            theme_name = "Quality Metrics & Health Profile"
+        elif "technical" in title_lower or "research" in title_lower:
+            theme_color = "#1a365d"  # Deep Indigo
+            bg_light = "#ebf8ff"
+            border_color = "#bee3f8"
+            accent_color = "#3182ce"
+            theme_name = "Technical Lab & Research Document"
+        elif "executive" in title_lower:
+            theme_color = "#2d3748"  # Slate
+            bg_light = "#edf2f7"
+            border_color = "#e2e8f0"
+            accent_color = "#4a5568"
+            theme_name = "Executive Briefing Summary"
+        else:
+            theme_color = "#2b6cb0"  # Cobalt Blue
+            bg_light = "#ebf8ff"
+            border_color = "#bee3f8"
+            accent_color = "#3182ce"
+            theme_name = "Analytics Summary Report"
             
-            if subtitle:
-                pdf.set_font("Helvetica", "", 11)
-                safe_subtitle = str(subtitle)[:100]
-                pdf.cell(0, 7, safe_subtitle, border=False, align="C")
-                pdf.ln(10)
-            else:
-                pdf.ln(4)
-        except Exception as e:
-            logger.error(f"Error adding title to PDF: {e}")
+        generation_time = datetime.now().strftime("%B %d, %Y at %I:%M %p")
+        
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <title>{title}</title>
+            <style>
+                @page {{
+                    size: A4;
+                    margin: 20mm;
+                    @bottom-right {{
+                        content: "Page " counter(page) " of " counter(pages);
+                        font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+                        font-size: 8pt;
+                        color: #718096;
+                    }}
+                    @bottom-left {{
+                        content: "{title} • {theme_name}";
+                        font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+                        font-size: 8pt;
+                        color: #718096;
+                    }}
+                }}
+                body {{
+                    font-family: 'Georgia', 'Times New Roman', serif;
+                    color: #2d3748;
+                    line-height: 1.6;
+                    font-size: 10.5pt;
+                }}
+                header {{
+                    border-bottom: 2px solid {theme_color};
+                    padding-bottom: 12px;
+                    margin-bottom: 25px;
+                }}
+                .report-title {{
+                    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+                    color: #1a365d;
+                    font-size: 22pt;
+                    font-weight: 800;
+                    margin: 0 0 5px 0;
+                    letter-spacing: -0.5px;
+                    text-transform: uppercase;
+                }}
+                .report-subtitle {{
+                    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+                    color: #4a5568;
+                    font-size: 11pt;
+                    margin: 0;
+                    font-weight: 400;
+                }}
+                .meta-bar {{
+                    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+                    font-size: 8.5pt;
+                    color: #718096;
+                    margin-bottom: 25px;
+                    background-color: {bg_light};
+                    padding: 8px 12px;
+                    border: 1px solid {border_color};
+                    border-radius: 6px;
+                }}
+                h2 {{
+                    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+                    color: {theme_color};
+                    font-size: 13pt;
+                    margin-top: 25px;
+                    margin-bottom: 12px;
+                    border-bottom: 1px solid {border_color};
+                    padding-bottom: 5px;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                }}
+                p {{
+                    margin-bottom: 15px;
+                    text-align: justify;
+                }}
+                .section-container {{
+                    page-break-inside: avoid;
+                    margin-bottom: 25px;
+                }}
+                .row-item {{
+                    margin-bottom: 15px;
+                    padding-bottom: 8px;
+                    border-bottom: 1px dashed {border_color};
+                }}
+                .row-label {{
+                    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+                    font-weight: bold;
+                    color: {accent_color};
+                    font-size: 9.5pt;
+                    margin-bottom: 3px;
+                }}
+                .row-value {{
+                    font-size: 10pt;
+                    text-align: justify;
+                }}
+            </style>
+        </head>
+        <body>
+            <header>
+                <h1 class="report-title">{title}</h1>
+                {f'<p class="report-subtitle">{subtitle}</p>' if subtitle else ''}
+            </header>
 
-        for section in validated_sections:
-            try:
-                pdf.set_font("Helvetica", "B", 12)
-                heading = str(section.get("heading") or "Section")[:100]
-                pdf.cell(0, 9, heading)
-                pdf.ln(7)
+            <div class="meta-bar">
+                <strong>Generated On:</strong> {generation_time} &nbsp;&bull;&nbsp; 
+                <strong>Theme Applied:</strong> {theme_name}
+            </div>
+        """
+        
+        for section in sections:
+            heading = section.get("heading") or "Section"
+            rows = section.get("rows") or []
+            
+            html_content += f"""
+            <div class="section-container">
+                <h2>{heading}</h2>
+                <div class="section-rows">
+            """
+            
+            for row in rows:
+                label = row.get("label") or ""
+                value = row.get("value") or ""
                 
-                pdf.set_font("Helvetica", size=10)
-                rows = section.get("rows") or []
+                # Format value line breaks and simple formatting
+                value_formatted = value.replace("\n", "<br/>")
                 
-                if isinstance(rows, list):
-                    for row in rows:
-                        if isinstance(row, dict):
-                            label = str(row.get("label") or "")[:100]
-                            value = str(row.get("value") or "")[:200]
-                            try:
-                                pdf.multi_cell(0, 7, f"{label}: {value}")
-                            except Exception as e:
-                                logger.warning(f"Error adding row to PDF: {e}")
-                                pdf.cell(0, 7, f"[Error rendering row: {str(e)[:50]}]")
-                pdf.ln(3)
-            except Exception as e:
-                logger.error(f"Error adding section to PDF: {e}")
-                pdf.set_font("Helvetica", size=10)
-                pdf.cell(0, 10, f"[Error rendering section: {str(e)[:100]}]")
-
-        try:
-            return _pdf_output_bytes(pdf)
-        except Exception as e:
-            logger.error(f"Error outputting PDF: {e}")
-            return b"%PDF-1.4\n%EOF"
-    
+                html_content += f"""
+                    <div class="row-item">
+                        {f'<div class="row-label">{label}</div>' if label else ''}
+                        <div class="row-value">{value_formatted}</div>
+                    </div>
+                """
+                
+            html_content += """
+                </div>
+            </div>
+            """
+            
+        html_content += """
+        </body>
+        </html>
+        """
+        
+        return HTML(string=html_content).write_pdf()
+        
     except Exception as e:
-        logger.exception(f"Failed to generate structured PDF: {e}")
+        logger.exception(f"Failed to generate structured WeasyPrint PDF: {e}")
         return b"%PDF-1.4\n%EOF"
 
 
 def generate_structured_report_pptx(*, title: str, subtitle: str, sections: list[dict]) -> bytes:
     """Generate PPTX report with template styling."""
     try:
-        if not isinstance(title, str):
-            title = str(title or "Report")
-        if not isinstance(subtitle, str):
-            subtitle = str(subtitle or "")
-        if sections is None:
-            sections = []
-        if not isinstance(sections, list):
-            sections = []
+        title_str = str(title or "Report")
+        subtitle_str = str(subtitle or "")
+        sections = sections or []
         
         presentation = Presentation()
         presentation.slide_width = Inches(13.333)
@@ -192,10 +594,6 @@ def generate_structured_report_pptx(*, title: str, subtitle: str, sections: list
         try:
             title_slide_layout = presentation.slide_layouts[6]  # blank layout
             title_slide = presentation.slides.add_slide(title_slide_layout)
-            
-            from pptx.util import Inches, Pt, Emu
-            from pptx.dml.color import RGBColor
-            from pptx.enum.text import PP_ALIGN
             
             bg = title_slide.background
             fill = bg.fill
@@ -206,18 +604,18 @@ def generate_structured_report_pptx(*, title: str, subtitle: str, sections: list
             tf = title_box.text_frame
             tf.word_wrap = True
             p = tf.paragraphs[0]
-            p.text = str(title)[:100]
+            p.text = title_str[:100]
             p.font.size = Pt(40)
             p.font.bold = True
             p.font.color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
             p.alignment = PP_ALIGN.CENTER
             
-            if subtitle:
+            if subtitle_str:
                 sub_box = title_slide.shapes.add_textbox(Inches(0.5), Inches(4.2), Inches(12.333), Inches(1))
                 tf2 = sub_box.text_frame
                 tf2.word_wrap = True
                 p2 = tf2.paragraphs[0]
-                p2.text = str(subtitle)[:100]
+                p2.text = subtitle_str[:100]
                 p2.font.size = Pt(20)
                 p2.font.color.rgb = RGBColor(0xCC, 0xCC, 0xCC)
                 p2.alignment = PP_ALIGN.CENTER
@@ -225,7 +623,6 @@ def generate_structured_report_pptx(*, title: str, subtitle: str, sections: list
             date_box = title_slide.shapes.add_textbox(Inches(0.5), Inches(6.8), Inches(12.333), Inches(0.4))
             tf3 = date_box.text_frame
             p3 = tf3.paragraphs[0]
-            from datetime import datetime
             p3.text = f"Generated on {datetime.now().strftime('%B %d, %Y')}"
             p3.font.size = Pt(12)
             p3.font.color.rgb = RGBColor(0xAA, 0xAA, 0xAA)
@@ -300,7 +697,7 @@ def generate_structured_report_pptx(*, title: str, subtitle: str, sections: list
             fallback_out = io.BytesIO()
             fallback.save(fallback_out)
             return fallback_out.getvalue()
-    
+            
     except Exception as e:
         logger.exception(f"Failed to generate PPTX: {e}")
         fallback = Presentation()

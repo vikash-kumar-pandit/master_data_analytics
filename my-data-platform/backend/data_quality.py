@@ -11,6 +11,9 @@ Provides comprehensive quality metrics for datasets including:
 import polars as pl
 from datetime import datetime, timedelta
 from typing import Dict, List, Any
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def calculate_data_quality_metrics(dataframe: pl.DataFrame) -> Dict[str, Any]:
@@ -73,7 +76,8 @@ def calculate_data_quality_metrics(dataframe: pl.DataFrame) -> Dict[str, Any]:
         
         if duplicate_pct > 10:
             metrics["issues"].append(f"Dataset has {duplicate_pct:.1f}% duplicate rows")
-    except:
+    except Exception as exc:
+        logger.warning("Uniqueness score calculation failed: %s", exc)
         metrics["uniqueness_score"] = 100
     
     # 3. CONSISTENCY SCORE (type violations)
@@ -95,7 +99,8 @@ def calculate_data_quality_metrics(dataframe: pl.DataFrame) -> Dict[str, Any]:
                 consistency_scores.append(98)
             else:
                 consistency_scores.append(90)
-        except:
+        except Exception as exc:
+            logger.debug("Consistency check failed for column '%s': %s", col, exc)
             consistency_scores.append(80)
     
     metrics["consistency_score"] = sum(consistency_scores) / len(consistency_scores) if consistency_scores else 0
@@ -116,11 +121,10 @@ def calculate_data_quality_metrics(dataframe: pl.DataFrame) -> Dict[str, Any]:
                         accuracy_scores.append(70)
                     else:
                         accuracy_scores.append(85)
-                else:
-                    accuracy_scores.append(0)
             else:
-                accuracy_scores.append(90)
-        except:
+                accuracy_scores.append(0)
+        except Exception as exc:
+            logger.debug("Accuracy check failed for column '%s': %s", col, exc)
             accuracy_scores.append(75)
     
     metrics["accuracy_score"] = sum(accuracy_scores) / len(accuracy_scores) if accuracy_scores else 0
@@ -148,7 +152,8 @@ def calculate_data_quality_metrics(dataframe: pl.DataFrame) -> Dict[str, Any]:
                         "max": float(non_null.max()),
                         "mean": float(non_null.mean()),
                     })
-            except:
+            except Exception as exc:
+                logger.debug("Column stats calculation failed for '%s': %s", col, exc)
                 pass
         
         metrics["column_scores"][col] = score

@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  db:
+    ports:
+      - "5432:5432"
+
+  redis:
+    ports:
+      - "6379:6379"
+
+  api:
+    command: >
+      sh -c "python wait-for-db.py &&
+             python -c 'from database import init_db; init_db()' &&
+             uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - auth_data:/app/data
+    environment:
+      APP_ENV: development
+      LOG_LEVEL: DEBUG
+
+  worker:
+    volumes:
+      - ./backend:/app
+      - auth_data:/app/data
+    environment:
+      APP_ENV: development
+      LOG_LEVEL: DEBUG
+
+  flower:
+    ports:
+      - "5555:5555"
+    profiles:
+      - development
+
+  nginx:
+    # Disable nginx gateway in dev, developer maps Vite and FastAPI ports directly
+    profiles:
+      - production
+
+  # Development-only frontend dev server container
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    command: npm run dev -- --host 0.0.0.0 --port 5173
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      VITE_API_URL: http://localhost:8000/api
+      VITE_APP_ENV: development
+    networks:
+      - frontend-net
+    profiles:
+      - development
