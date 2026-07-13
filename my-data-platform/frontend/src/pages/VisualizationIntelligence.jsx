@@ -13,7 +13,15 @@ const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-  const token = sessionStorage.getItem('token') || localStorage.getItem('token');
+  let token = null;
+  try {
+    const raw = sessionStorage.getItem('my_data_platform_auth') || localStorage.getItem('my_data_platform_auth');
+    if (raw) {
+      token = JSON.parse(raw)?.token;
+    }
+  } catch (e) {
+    console.error("Error reading token in VisualizationIntelligence interceptor", e);
+  }
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -116,7 +124,15 @@ export default function VisualizationIntelligence() {
 
   const handleExport = (format) => {
     if (!activeProjectId) return;
-    const token = sessionStorage.getItem('token') || localStorage.getItem('token');
+    let token = '';
+    try {
+      const raw = sessionStorage.getItem('my_data_platform_auth') || localStorage.getItem('my_data_platform_auth');
+      if (raw) {
+        token = JSON.parse(raw)?.token;
+      }
+    } catch (e) {
+      console.error("Error reading token in handleExport", e);
+    }
     window.open(`http://localhost:8000/api/visualization/export?project_id=${activeProjectId}&format=${format}&token=${token}`);
   };
 

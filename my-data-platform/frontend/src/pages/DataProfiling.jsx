@@ -17,7 +17,15 @@ const api = axios.create({
 
 // Configure auth token interceptor
 api.interceptors.request.use((config) => {
-  const token = sessionStorage.getItem('token') || localStorage.getItem('token');
+  let token = null;
+  try {
+    const raw = sessionStorage.getItem('my_data_platform_auth') || localStorage.getItem('my_data_platform_auth');
+    if (raw) {
+      token = JSON.parse(raw)?.token;
+    }
+  } catch (e) {
+    console.error("Error reading token in DataProfiling interceptor", e);
+  }
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }

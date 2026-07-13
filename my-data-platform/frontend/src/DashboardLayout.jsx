@@ -23,7 +23,7 @@ export default function DashboardLayout({ children }) {
   const [activeProjectId, setActiveProjectId] = useState('');
 
   useEffect(() => {
-    const token = sessionStorage.getItem('token') || localStorage.getItem('token');
+    const token = user?.token;
     if (token) {
       axios.get('http://localhost:8000/api/analytics/projects', {
         headers: { Authorization: `Bearer ${token}` }
@@ -35,7 +35,7 @@ export default function DashboardLayout({ children }) {
       })
       .catch(err => console.error("Layout projects fetch failed", err));
     }
-  }, []);
+  }, [user]);
 
   const { 
     rawData, 
