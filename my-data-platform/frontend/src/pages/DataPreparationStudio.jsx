@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { 
   GitBranch, ArrowLeftRight, Settings, Undo2, Redo2, ArrowDownToLine, 
   Trash2, Play, CheckCircle, RefreshCw, Sliders, Search, 
-  FileSpreadsheet, Layers, Type, Trash, Edit, Check, AlertTriangle, ShieldCheck
+  FileSpreadsheet, Layers, Type, Trash, Edit, Check, AlertTriangle, ShieldCheck, AlertCircle
 } from 'lucide-react';
 import DashboardLayout from '../DashboardLayout';
 
@@ -33,6 +34,7 @@ api.interceptors.request.use((config) => {
 });
 
 export default function DataPreparationStudio() {
+  const navigate = useNavigate();
   const [projects, setProjects] = useState([]);
   const [selectedProjectId, setSelectedProjectId] = useState('');
   const [history, setHistory] = useState({ current_pointer: 0, max_pointer: 0, steps: [] });
@@ -220,15 +222,17 @@ export default function DataPreparationStudio() {
           </div>
           
           <div className="flex items-center gap-2.5">
-            <select 
-              value={selectedProjectId}
-              onChange={handleProjectChange}
-              className="px-3 py-1.5 bg-slate-50 border rounded-lg font-semibold text-xs text-slate-700 dark:bg-neutral-850 dark:border-neutral-700 dark:text-slate-200"
-            >
-              {projects.map(p => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </select>
+            {projects.length > 0 && (
+              <select 
+                value={selectedProjectId}
+                onChange={handleProjectChange}
+                className="px-3 py-1.5 bg-slate-50 border rounded-lg font-semibold text-xs text-slate-700 dark:bg-neutral-850 dark:border-neutral-700 dark:text-slate-200"
+              >
+                {projects.map(p => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            )}
             
             <button 
               onClick={handleUndo} 
@@ -264,8 +268,24 @@ export default function DataPreparationStudio() {
           </div>
         )}
 
-        {/* Studio Workspace panels */}
-        <div className="flex flex-1 gap-6 min-h-0">
+        {projects.length === 0 ? (
+          <div className="bg-white dark:bg-neutral-850 p-12 rounded-2xl border border-slate-200 dark:border-neutral-700 shadow-sm text-center flex flex-col items-center justify-center gap-4 flex-1">
+            <div className="p-4 bg-amber-50 dark:bg-amber-900/10 text-amber-600 rounded-full">
+              <AlertCircle className="w-12 h-12" />
+            </div>
+            <h2 className="text-xl font-black text-slate-900 dark:text-white">No Datasets Uploaded</h2>
+            <p className="text-slate-500 max-w-lg">Before you can use the AI Data Preparation Studio, you must upload a dataset. Please visit the Data Workspace to upload your first dataset.</p>
+            <button 
+              onClick={() => navigate('/')}
+              className="mt-4 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition shadow-lg shadow-blue-200 flex items-center gap-2"
+            >
+              Go to Workspace
+            </button>
+          </div>
+        ) : (
+          <>
+            {/* Studio Workspace panels */}
+            <div className="flex flex-1 gap-6 min-h-0">
           
           {/* Left panel: Versions list */}
           <div className="w-56 bg-white dark:bg-neutral-850 border rounded-xl p-4 flex flex-col gap-4 overflow-y-auto shadow-sm">
@@ -650,6 +670,8 @@ export default function DataPreparationStudio() {
             ))}
           </div>
         </div>
+          </>
+        )}
 
       </div>
     </DashboardLayout>

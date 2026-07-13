@@ -153,15 +153,17 @@ export default function DataProfiling() {
           </div>
           
           <div className="flex items-center gap-3">
-            <select 
-              value={selectedProjectId}
-              onChange={handleProjectChange}
-              className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl font-semibold text-sm focus:outline-none dark:bg-neutral-800 dark:border-neutral-700 text-slate-800 dark:text-slate-200"
-            >
-              {projects.map(p => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </select>
+            {projects.length > 0 && (
+              <select 
+                value={selectedProjectId}
+                onChange={handleProjectChange}
+                className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl font-semibold text-sm focus:outline-none dark:bg-neutral-800 dark:border-neutral-700 text-slate-800 dark:text-slate-200"
+              >
+                {projects.map(p => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            )}
 
             {profile && (
               <div className="flex items-center gap-2">
@@ -197,20 +199,36 @@ export default function DataProfiling() {
 
         {/* Profiler trigger if no run is loaded */}
         {!profile && !loading && (
-          <div className="bg-white dark:bg-neutral-850 p-12 rounded-2xl border border-slate-200 dark:border-neutral-700 shadow-sm text-center flex flex-col items-center justify-center gap-4">
-            <div className="p-4 bg-indigo-50 dark:bg-indigo-900/10 text-indigo-600 rounded-full">
-              <Database className="w-12 h-12" />
+          projects.length === 0 ? (
+            <div className="bg-white dark:bg-neutral-850 p-12 rounded-2xl border border-slate-200 dark:border-neutral-700 shadow-sm text-center flex flex-col items-center justify-center gap-4">
+              <div className="p-4 bg-amber-50 dark:bg-amber-900/10 text-amber-600 rounded-full">
+                <AlertCircle className="w-12 h-12" />
+              </div>
+              <h2 className="text-xl font-black text-slate-900 dark:text-white">No Datasets Uploaded</h2>
+              <p className="text-slate-500 max-w-lg">Before you can run the universal data profiler, you must upload a dataset. Please visit the Data Workspace to upload your first dataset.</p>
+              <button 
+                onClick={() => navigate('/')}
+                className="mt-4 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition shadow-lg shadow-blue-200 flex items-center gap-2"
+              >
+                Go to Workspace
+              </button>
             </div>
-            <h2 className="text-xl font-black text-slate-900 dark:text-white">Dataset Not Profiled</h2>
-            <p className="text-slate-500 max-w-lg">Click the button below to initialize the universal data profiler. We will calculate statistics, missing densities, correlation heatmaps, PII exposures, and generate an AI data story.</p>
-            <button 
-              onClick={handleRunProfiling}
-              disabled={!selectedProjectId}
-              className="mt-4 px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white rounded-xl font-bold transition shadow-lg shadow-blue-200 flex items-center gap-2"
-            >
-              <RefreshCw className="w-5 h-5" /> Run Advanced Profiler
-            </button>
-          </div>
+          ) : (
+            <div className="bg-white dark:bg-neutral-850 p-12 rounded-2xl border border-slate-200 dark:border-neutral-700 shadow-sm text-center flex flex-col items-center justify-center gap-4">
+              <div className="p-4 bg-indigo-50 dark:bg-indigo-900/10 text-indigo-600 rounded-full">
+                <Database className="w-12 h-12" />
+              </div>
+              <h2 className="text-xl font-black text-slate-900 dark:text-white">Dataset Not Profiled</h2>
+              <p className="text-slate-500 max-w-lg">Click the button below to initialize the universal data profiler. We will calculate statistics, missing densities, correlation heatmaps, PII exposures, and generate an AI data story.</p>
+              <button 
+                onClick={handleRunProfiling}
+                disabled={!selectedProjectId}
+                className="mt-4 px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white rounded-xl font-bold transition shadow-lg shadow-blue-200 flex items-center gap-2"
+              >
+                <RefreshCw className="w-5 h-5" /> Run Advanced Profiler
+              </button>
+            </div>
+          )
         )}
 
         {/* Loading Spinner */}
