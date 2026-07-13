@@ -167,7 +167,8 @@ def test_identify_dataset_semantics_openai_missing(mock_openai):
         assert "not installed" in res["error"]
 
 
-def test_identify_dataset_semantics_no_api_key():
+@patch("identifier.OpenAI")
+def test_identify_dataset_semantics_no_api_key(mock_openai_class):
     df = pl.DataFrame({"a": [1, 2]})
     
     # Simulate OPENAI_API_KEY is not configured
