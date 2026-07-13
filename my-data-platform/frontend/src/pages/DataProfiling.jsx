@@ -4,7 +4,7 @@ import axios from 'axios';
 import { 
   Activity, ArrowDownToLine, AlertTriangle, CheckCircle, Database, 
   HelpCircle, BarChart3, ShieldAlert, Cpu, Sparkles, RefreshCw, 
-  FileText, Columns, ShieldCheck, Info
+  FileText, Columns, ShieldCheck, Info, AlertCircle
 } from 'lucide-react';
 import DashboardLayout from '../DashboardLayout';
 
