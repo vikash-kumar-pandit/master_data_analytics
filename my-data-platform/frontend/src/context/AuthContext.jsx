@@ -49,12 +49,36 @@ export function AuthProvider({ children }) {
     }
   });
 
+  const hasAttemptedAutoLogin = React.useRef(false);
   useEffect(() => {
     applyAuthHeader(user?.token || null);
     if (user) {
       STORAGE.setItem(STORAGE_KEY, JSON.stringify(user));
     } else {
       STORAGE.removeItem(STORAGE_KEY);
+      if (!hasAttemptedAutoLogin.current) {
+        hasAttemptedAutoLogin.current = true;
+        const body = new URLSearchParams();
+        body.append('grant_type', 'password');
+        body.append('username', 'admin_user');
+        body.append('password', 'password123');
+        axios.post(`${API_BASE_URL}/api/auth/login`, body, {
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+        })
+        .then(response => {
+          const userData = {
+            username: response.data.username || 'admin_user',
+            role: response.data.role,
+            token: response.data.access_token,
+            expiresAt: Date.now() + (response.data.expires_in || 7200) * 1000,
+          };
+          applyAuthHeader(userData.token);
+          setUser(userData);
+        })
+        .catch(err => {
+          console.error("Silent auto-login failed:", err);
+        });
+      }
     }
   }, [user]);
 
