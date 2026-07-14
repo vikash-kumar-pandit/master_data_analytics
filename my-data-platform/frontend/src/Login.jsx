@@ -50,10 +50,8 @@ export default function Login() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (isAuthenticated) {
-      navigate('/', { replace: true });
-    }
-  }, [isAuthenticated, navigate]);
+    navigate('/', { replace: true });
+  }, [navigate]);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
