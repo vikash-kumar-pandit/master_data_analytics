@@ -146,7 +146,7 @@ For GitHub Pages deployment on subdomain `https://username.github.io/repo-name/`
 export default defineConfig({
   plugins: [react()],
   base: process.env.NODE_ENV === 'production' 
-    ? '/maste_data_analytics/'  // Match repo name
+    ? '/master_data_analytics/'  // Match repo name
     : '/',
 });
 ```
