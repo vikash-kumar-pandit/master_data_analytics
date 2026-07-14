@@ -25,45 +25,98 @@ const UploadDashboard = () => {
   });
 
   return (
-    <div className="w-full flex flex-col items-center font-sans">
+    <div className="w-full flex flex-col items-center font-sans max-w-5xl mx-auto py-6">
       
       {/* 🚀 Header Section */}
-      <div className="text-center mb-10 mt-10">
-        <h1 className="text-4xl font-extrabold text-slate-900 mb-4">
-          DataSaaS <span className="text-blue-600">Pro</span>
+      <div className="text-center mb-10">
+        <h1 className="text-4xl font-extrabold text-slate-900 dark:text-white mb-3 tracking-tight">
+          Decision Intelligence <span className="text-indigo-600">DIOS v2.0</span>
         </h1>
-        <p className="text-lg text-slate-600 max-w-xl mx-auto">
-          Upload your raw business data. Our AI will automatically secure, clean, and mine it for deep insights without a single line of code.
+        <p className="text-base text-slate-600 dark:text-slate-400 max-w-xl mx-auto leading-relaxed">
+          Ingest raw tables. Our operating system handles masking, profiling, cleaning, auto-visualizations, and executive reporting in seconds.
         </p>
       </div>
 
-      {/* 📥 Upload Area (अगर डेटा अभी तक अपलोड नहीं हुआ है) */}
-      {!rawData.length > 0 && (
-        <div 
-          {...getRootProps()} 
-          className={`w-full max-w-3xl p-16 border-4 border-dashed rounded-2xl cursor-pointer transition-all duration-300 flex flex-col items-center justify-center
-            ${isDragActive ? 'border-blue-500 bg-blue-50' : 'border-slate-300 bg-white hover:border-blue-400 hover:bg-slate-550'}`}
-        >
-          <input {...getInputProps()} />
-          
-          {isLoading ? (
-            <div className="flex flex-col items-center animate-pulse">
-              <Activity className="w-16 h-16 text-blue-500 mb-4 animate-spin" />
-              <p className="text-xl font-semibold text-slate-700">Analyzing & Securing Data...</p>
-              <p className="text-sm text-slate-500 mt-2">Masking PII and generating health score</p>
+      {/* 📥 Upload Area & Onboarding (अगर डेटा अभी तक अपलोड नहीं हुआ है) */}
+      {rawData.length === 0 && (
+        <div className="w-full flex flex-col gap-10">
+          <div 
+            {...getRootProps()} 
+            className={`p-14 border-4 border-dashed rounded-3xl cursor-pointer transition-all duration-300 flex flex-col items-center justify-center shadow-sm
+              ${isDragActive ? 'border-indigo-500 bg-indigo-50/50 dark:bg-indigo-950/20' : 'border-slate-200 bg-white dark:bg-neutral-850 hover:border-indigo-400 dark:border-neutral-700'}`}
+          >
+            <input {...getInputProps()} />
+            
+            {isLoading ? (
+              <div className="flex flex-col items-center animate-pulse">
+                <Activity className="w-16 h-16 text-indigo-600 mb-4 animate-spin" />
+                <p className="text-xl font-semibold text-slate-700 dark:text-slate-350">Analyzing & Securing Data...</p>
+                <p className="text-sm text-slate-500 mt-2">Masking PII and generating health score</p>
+              </div>
+            ) : (
+              <>
+                <UploadCloud className={`w-16 h-16 mb-4 ${isDragActive ? 'text-indigo-600' : 'text-slate-400'}`} />
+                <p className="text-xl font-black text-slate-700 dark:text-slate-300 mb-1">
+                  {isDragActive ? "Drop the file here!" : "Drag & drop your dataset here"}
+                </p>
+                <p className="text-xs text-slate-400">Supports CSV, Excel, and JSON files</p>
+                <button className="mt-6 px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl transition font-bold text-xs">
+                  Browse Files
+                </button>
+              </>
+            )}
+          </div>
+
+          {/* Quick Sample Datasets & Tips Card Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 shrink-0">
+            {/* Sample datasets */}
+            <div className="bg-white dark:bg-neutral-850 p-6 border dark:border-neutral-700 rounded-2xl shadow-sm flex flex-col gap-4">
+              <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">Try Sample Datasets</h3>
+              <div className="flex flex-col gap-3">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const RETAIL_CSV = `Transaction_ID,Product_Name,Quantity,Price,Customer_Email,Date\nTXN001,Wireless Mouse,2,25.99,john.doe@example.com,2026-01-10\nTXN002,Keyboard,1,45.50,alice.smith@example.com,2026-01-11\nTXN003,USB-C Hub,5,19.99,,2026-01-12\nTXN004,Bluetooth Speaker,1,59.99,bob.jones@example.com,2026-01-12\nTXN005,Wireless Mouse,3,25.99,john.doe@example.com,2026-01-13\nTXN006,Monitor Stand,1,34.99,eve.davis@example.com,2026-01-14`;
+                    const file = new File([RETAIL_CSV], "retail_sales_sample.csv", { type: 'text/csv' });
+                    uploadData(file);
+                  }}
+                  className="p-3 bg-slate-50 hover:bg-slate-100 dark:bg-neutral-800/40 dark:hover:bg-neutral-800 border dark:border-neutral-700 rounded-xl text-left transition flex justify-between items-center"
+                >
+                  <div>
+                    <p className="font-extrabold text-xs text-slate-800 dark:text-slate-200">Retail Sales Tracker</p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">Contains raw sales, quantities, and customer PII details.</p>
+                  </div>
+                  <ArrowRight className="w-4 h-4 text-slate-400" />
+                </button>
+
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const HR_CSV = `Employee_ID,Name,Department,Salary,Hire_Date,Phone\nEMP101,Jane Doe,Marketing,75000,2024-03-15,555-0192\nEMP102,John Smith,Engineering,95000,,555-0283\nEMP103,Alice Johnson,HR,68000,2023-01-10,555-0374\nEMP104,Bob Carter,Sales,72000,2025-06-01,555-0465\nEMP105,Charlie Brown,Engineering,98000,2022-11-20,555-0556`;
+                    const file = new File([HR_CSV], "employee_directory.csv", { type: 'text/csv' });
+                    uploadData(file);
+                  }}
+                  className="p-3 bg-slate-50 hover:bg-slate-100 dark:bg-neutral-800/40 dark:hover:bg-neutral-800 border dark:border-neutral-700 rounded-xl text-left transition flex justify-between items-center"
+                >
+                  <div>
+                    <p className="font-extrabold text-xs text-slate-800 dark:text-slate-200">HR Directory</p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">Contains department metrics, salary ranges, and hire dates.</p>
+                  </div>
+                  <ArrowRight className="w-4 h-4 text-slate-400" />
+                </button>
+              </div>
             </div>
-          ) : (
-            <>
-              <UploadCloud className={`w-20 h-20 mb-6 ${isDragActive ? 'text-blue-600' : 'text-slate-400'}`} />
-              <p className="text-2xl font-semibold text-slate-700 mb-2">
-                {isDragActive ? "Drop the file here!" : "Drag & drop your dataset here"}
-              </p>
-              <p className="text-slate-500">Supports CSV, Excel, and JSON</p>
-              <button className="mt-8 px-6 py-3 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition font-medium">
-                Browse Files
-              </button>
-            </>
-          )}
+
+            {/* Quick tips & onboarding */}
+            <div className="bg-white dark:bg-neutral-850 p-6 border dark:border-neutral-700 rounded-2xl shadow-sm flex flex-col gap-4">
+              <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">DIOS System Quick Guide</h3>
+              <ul className="space-y-2 text-xs text-slate-500 leading-relaxed dark:text-slate-400">
+                <li className="flex gap-2"><span className="text-indigo-600 font-black">1.</span> Upload a dataset to begin the automated ingestion pipeline.</li>
+                <li className="flex gap-2"><span className="text-indigo-600 font-black">2.</span> AI will mask phone numbers, locations, and personal email addresses automatically.</li>
+                <li className="flex gap-2"><span className="text-indigo-600 font-black">3.</span> Check Data Profiling or Data Quality sections to run statistical metrics and scans.</li>
+              </ul>
+            </div>
+          </div>
         </div>
       )}
 

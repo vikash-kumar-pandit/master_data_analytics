@@ -4,7 +4,7 @@ import useDataStore from '../store';
 import { Calendar, Trash2, CheckCircle, AlertCircle } from 'lucide-react';
 
 export default function ScheduleExports() {
-  const { schedulesList, getSchedules, createSchedule } = useDataStore();
+  const { schedulesList, getSchedules, createSchedule, deleteSchedule } = useDataStore();
 
   const [scheduleName, setScheduleName] = useState('');
   const [scheduleCron, setScheduleCron] = useState('0 8 * * *');
@@ -155,9 +155,23 @@ export default function ScheduleExports() {
                       <p className="text-xs text-slate-500 font-mono mt-1">Cron: {sched.schedule_cron} · Format: {sched.export_format.toUpperCase()}</p>
                       {sched.next_run && <p className="text-[10px] text-slate-400 mt-1">Next Run: {new Date(sched.next_run).toLocaleString()}</p>}
                     </div>
-                    <span className={`px-2.5 py-1 text-[10px] font-bold rounded-full ${sched.enabled ? 'bg-green-100 text-green-800' : 'bg-slate-200 text-slate-600'}`}>
-                      {sched.enabled ? 'Active' : 'Paused'}
-                    </span>
+                    <div className="flex items-center gap-3">
+                      <span className={`px-2.5 py-1 text-[10px] font-bold rounded-full ${sched.enabled ? 'bg-green-100 text-green-800' : 'bg-slate-200 text-slate-600'}`}>
+                        {sched.enabled ? 'Active' : 'Paused'}
+                      </span>
+                      <button
+                        onClick={async () => {
+                          if (window.confirm("Are you sure you want to delete this schedule?")) {
+                            await deleteSchedule(sched.id);
+                            setMessage("Schedule deleted successfully!");
+                            setTimeout(() => setMessage(''), 3000);
+                          }
+                        }}
+                        className="text-red-500 hover:text-red-700 p-1.5 rounded-lg hover:bg-red-50 transition"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>

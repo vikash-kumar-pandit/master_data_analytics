@@ -2,6 +2,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import DashboardLayout from '../DashboardLayout';
 import apiService from '../api/client';
 import useDataStore from '../store';
+import AutoMLWidget from '../components/AutoMLWidget';
+import AIEngineWidget from '../components/AIEngineWidget';
 import {
   ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Legend, ReferenceLine, Area
@@ -72,8 +74,11 @@ const TrendBadge = ({ direction }) => {
 
 // ─── Main Component ────────────────────────────────────────────────────────────
 export default function PredictiveAnalytics() {
-  const { rawData, cleanedData, columns, setForecastResult } = useDataStore();
+  const { rawData, cleanedData, columns, setForecastResult, fileObject } = useDataStore();
   const currentDataset = cleanedData.length > 0 ? cleanedData : rawData;
+
+  const [predictiveTab, setPredictiveTab] = useState('forecast'); // forecast | automl | nlp
+  const [automlTarget, setAutomlTarget] = useState('');
 
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState(null);
@@ -208,18 +213,41 @@ export default function PredictiveAnalytics() {
 
         {/* ── Header ── */}
         <div style={{ marginBottom: '28px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
             <div style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', borderRadius: '14px', padding: '10px' }}>
               <TrendingUp size={22} color="#fff" />
             </div>
             <div>
-              <h1 style={{ fontSize: '26px', fontWeight: 800, color: '#0f172a', margin: 0 }}>
-                Time Series Forecasting
+              <h1 style={{ fontSize: '26px', fontWeight: 800, color: '#0f172a', margin: 0 }} className="dark:text-white">
+                Predictive AI Analytics Studio
               </h1>
-              <p style={{ color: '#64748b', fontSize: '13px', margin: '3px 0 0' }}>
-                AI-powered trend regression • Linear OLS model • Moving-average smoothing
+              <p style={{ color: '#64748b', fontSize: '13px', margin: '3px 0 0' }} className="dark:text-slate-400">
+                AutoML estimator engine • Explainable AI insights • Time-series trend models
               </p>
             </div>
+          </div>
+
+          {/* Tab Selector buttons */}
+          <div style={{ display: 'flex', gap: '8px', borderBottom: '1px solid rgba(125,157,191,0.15)', paddingBottom: '10px' }}>
+            {[
+              { id: 'forecast', label: 'Time-Series Forecasting' },
+              { id: 'automl', label: 'AutoML Predictor (XAI)' },
+              { id: 'nlp', label: 'Clustering & NLP Classification' }
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setPredictiveTab(tab.id)}
+                style={{
+                  padding: '8px 16px', borderRadius: '10px', fontWeight: 700, fontSize: '12px', border: 'none', cursor: 'pointer',
+                  background: predictiveTab === tab.id ? '#4f46e5' : 'transparent',
+                  color: predictiveTab === tab.id ? '#fff' : '#64748b',
+                  transition: 'all 0.2s'
+                }}
+                className={predictiveTab !== tab.id ? 'hover:bg-slate-100 dark:hover:bg-neutral-800' : ''}
+              >
+                {tab.label}
+              </button>
+            ))}
           </div>
         </div>
 
@@ -239,7 +267,10 @@ export default function PredictiveAnalytics() {
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
 
-            {/* ── Config Panel ── */}
+            {/* ── Tab 1: Forecasting ── */}
+            {predictiveTab === 'forecast' && (
+              <>
+                {/* ── Config Panel ── */}
             <div style={{
               background: 'white', borderRadius: '18px',
               border: '1px solid #e2e8f0', padding: '24px',
@@ -659,6 +690,71 @@ export default function PredictiveAnalytics() {
                   </div>
                 )}
               </>
+            )}
+          </>
+        )}
+
+            {/* ── Tab 2: AutoML Predictor (XAI) ── */}
+            {predictiveTab === 'automl' && (
+              <div style={{ background: 'white', borderRadius: '18px', border: '1px solid rgba(125,157,191,0.15)', padding: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }} className="dark:bg-neutral-900 dark:border-neutral-800">
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }} className="dark:text-slate-400">
+                    🎯 Select Target Column for AutoML Estimator
+                  </label>
+                  <select
+                    value={automlTarget}
+                    onChange={e => setAutomlTarget(e.target.value)}
+                    style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #cbd5e1', borderRadius: '10px', fontSize: '13px', background: 'white', color: '#0f172a', outline: 'none' }}
+                  >
+                    <option value="">-- Select target column --</option>
+                    {columns.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+                <AutoMLWidget 
+                  file={fileObject} 
+                  targetColumn={automlTarget} 
+                  rows={currentDataset} 
+                  onResult={(res) => console.log('AutoML completed:', res)} 
+                />
+              </div>
+            )}
+
+            {/* ── Tab 3: Clustering & NLP ── */}
+            {predictiveTab === 'nlp' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <div style={{ background: 'white', borderRadius: '18px', border: '1px solid rgba(125,157,191,0.15)', padding: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }} className="dark:bg-neutral-900 dark:border-neutral-800">
+                  <AIEngineWidget 
+                    rows={currentDataset} 
+                    availableColumns={columns} 
+                    onUpdateData={(newData) => {
+                      useDataStore.setState({ cleanedData: newData });
+                      alert('NLP classification applied successfully! Check Data Workspace for new category values.');
+                    }} 
+                  />
+                </div>
+                
+                {/* Clustering Action */}
+                <div style={{ background: 'white', borderRadius: '18px', border: '1px solid rgba(125,157,191,0.15)', padding: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }} className="dark:bg-neutral-900 dark:border-neutral-800">
+                  <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#334155', marginBottom: '8px' }} className="dark:text-white">No-Code K-Means Clustering</h3>
+                  <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '16px' }} className="dark:text-slate-400">Autonomously run K-Means partitions on numeric vector columns of the dataset.</p>
+                  <button 
+                    onClick={async () => {
+                      try {
+                        const response = await apiService.post('/api/run-clustering', { rows: currentDataset });
+                        if (response.data.data) {
+                          useDataStore.setState({ cleanedData: response.data.data });
+                          alert('Clustering complete! Added "cluster" label column to dataset.');
+                        }
+                      } catch (err) {
+                        alert('Clustering failed: ' + (err?.response?.data?.detail || err.message));
+                      }
+                    }}
+                    style={{ padding: '10px 16px', background: '#4f46e5', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 700, fontSize: '12px', cursor: 'pointer' }}
+                  >
+                    Execute K-Means Clustering
+                  </button>
+                </div>
+              </div>
             )}
 
           </div>

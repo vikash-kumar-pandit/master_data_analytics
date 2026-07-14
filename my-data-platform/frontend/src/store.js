@@ -257,6 +257,15 @@ const useDataStore = create(
     }
   },
 
+  deleteSchedule: async (scheduleId) => {
+    try {
+      await storeApi.delete(`/api/schedule/${scheduleId}`);
+      get().getSchedules(); // Refresh the list
+    } catch (error) {
+      console.error("Failed to delete schedule", error);
+    }
+  },
+
   // Forecast state tracking
   forecastResult: null,
   setForecastResult: (result) => set({ forecastResult: result }),

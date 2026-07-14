@@ -1,20 +1,24 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Navigate, Route, Routes } from 'react-router-dom';
 import DashboardLayout from './DashboardLayout';
-import ReportBuilder from './pages/ReportBuilder';
-import DataQuality from './pages/DataQuality';
-import DataProfiling from './pages/DataProfiling';
-import DataPreparationStudio from './pages/DataPreparationStudio';
-import PredictiveAnalytics from './pages/PredictiveAnalytics';
-import RealTimeInsights from './pages/RealTimeInsights';
-import ScheduleExports from './pages/ScheduleExports';
-import AuditLogPage from './pages/AuditLogPage';
-import WorkflowPage from './pages/WorkflowPage';
-import SearchPage from './pages/SearchPage';
-import VisualizationIntelligence from './pages/VisualizationIntelligence';
-import Login from './Login';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ToastProvider } from './context/NotificationContext';
+import { ThemeProvider } from './context/ThemeContext';
+import { CommandPalette, Skeleton } from './components/ui';
+
+// Lazy load pages for dynamic code-splitting and optimization (Phase 5 Performance)
+const ReportBuilder = lazy(() => import('./pages/ReportBuilder'));
+const DataQuality = lazy(() => import('./pages/DataQuality'));
+const DataProfiling = lazy(() => import('./pages/DataProfiling'));
+const DataPreparationStudio = lazy(() => import('./pages/DataPreparationStudio'));
+const PredictiveAnalytics = lazy(() => import('./pages/PredictiveAnalytics'));
+const RealTimeInsights = lazy(() => import('./pages/RealTimeInsights'));
+const ScheduleExports = lazy(() => import('./pages/ScheduleExports'));
+const AuditLogPage = lazy(() => import('./pages/AuditLogPage'));
+const WorkflowPage = lazy(() => import('./pages/WorkflowPage'));
+const SearchPage = lazy(() => import('./pages/SearchPage'));
+const VisualizationIntelligence = lazy(() => import('./pages/VisualizationIntelligence'));
+const Login = lazy(() => import('./Login'));
 
 function ProtectedRoute({ children, allowedRoles }) {
   const { isAuthenticated, user } = useAuth();
@@ -33,10 +37,13 @@ function ProtectedRoute({ children, allowedRoles }) {
 function App() {
   return (
     <ToastProvider>
-      <AuthProvider>
-        <Router>
-          <Routes>
-            <Route path="/login" element={<Login />} />
+      <ThemeProvider>
+        <AuthProvider>
+          <Router>
+            <CommandPalette />
+            <Suspense fallback={<div className="p-8"><Skeleton variant="card" /></div>}>
+              <Routes>
+                <Route path="/login" element={<Login />} />
             <Route
               path="/"
               element={
@@ -137,8 +144,10 @@ function App() {
             />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
+          </Suspense>
         </Router>
       </AuthProvider>
+      </ThemeProvider>
     </ToastProvider>
   );
 }

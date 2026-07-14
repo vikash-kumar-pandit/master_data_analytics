@@ -3,10 +3,11 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   Database, LogOut, RefreshCw, BarChart2, Table, 
   ShieldCheck, Bot, Calendar, ClipboardList, AlertCircle, FileBarChart2,
-  Search, GitBranch, PieChart, Activity, Sliders, Sparkles
+  Search, GitBranch, PieChart, Activity, Sliders, Sparkles, Bell, Sun, Moon, Palette
 } from 'lucide-react';
 import axios from 'axios';
 import { useAuth } from './context/AuthContext';
+import { useTheme } from './context/ThemeContext';
 import useDataStore from './store';
 import UploadDashboard from './components/UploadDashboard';
 import DataViewer from './components/DataViewer';
@@ -15,12 +16,18 @@ import CopilotPanel from './components/CopilotPanel';
 
 export default function DashboardLayout({ children }) {
   const { user, logout } = useAuth();
+  const { theme, setTheme, toggle } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
   const currentPath = location.pathname;
 
   const [isCopilotOpen, setIsCopilotOpen] = useState(false);
   const [activeProjectId, setActiveProjectId] = useState('');
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [notifications, setNotifications] = useState([
+    { id: 1, message: "Welcome to DataSaaS Pro DIOS v2.0 Platform Overhaul!", unread: true },
+    { id: 2, message: "AutoML engine configured and ready.", unread: false }
+  ]);
 
   useEffect(() => {
     const token = user?.token;
@@ -47,6 +54,18 @@ export default function DashboardLayout({ children }) {
 
   const currentDataset = cleanedData.length > 0 ? cleanedData : rawData;
   const isDataLoaded = currentDataset && currentDataset.length > 0;
+
+  useEffect(() => {
+    if (isDataLoaded) {
+      const hasUploadedNotif = notifications.some(n => n.message === "Dataset uploaded and parsed successfully.");
+      if (!hasUploadedNotif) {
+        setNotifications(prev => [
+          { id: Date.now(), message: "Dataset uploaded and parsed successfully.", unread: true },
+          ...prev
+        ]);
+      }
+    }
+  }, [isDataLoaded]);
 
   // Protect routes that require data
   const dataRequiredPaths = ['/quality', '/predictive', '/reports', '/workflows', '/search', '/graphs'];
@@ -203,23 +222,102 @@ export default function DashboardLayout({ children }) {
       <div className="flex-1 flex flex-col h-screen overflow-hidden">
         
         {/* Top Header Bar */}
-        <header className="bg-white border-b border-slate-200 px-8 py-4 flex justify-between items-center shadow-sm shrink-0">
-          <div>
-            <h2 className="text-xl font-extrabold text-slate-900 capitalize tracking-tight">
+        <header className="bg-white dark:bg-neutral-850 border-b border-slate-200 dark:border-neutral-700 px-8 py-4 flex justify-between items-center shadow-sm shrink-0 transition-colors">
+          <div className="flex items-center gap-6">
+            <h2 className="text-xl font-extrabold text-slate-900 dark:text-white capitalize tracking-tight">
               {currentPath === '/' ? 'Data Workspace' : currentPath.slice(1).replace(/([A-Z])/g, ' $1')}
             </h2>
+
+            {/* Active Pipeline Progress Timeline */}
+            {isDataLoaded && (
+              <div className="hidden lg:flex items-center gap-2 bg-slate-50 dark:bg-neutral-800/40 px-4 py-1.5 rounded-full border border-slate-200 dark:border-neutral-700 text-[10px] font-bold select-none tracking-wider uppercase text-slate-400">
+                <span>Timeline:</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-emerald-600 dark:text-emerald-450">✔ Ingested</span>
+                  <span>/</span>
+                  <span className="text-emerald-600 dark:text-emerald-450">✔ Profiled</span>
+                  <span>/</span>
+                  <span className={cleanedData.length > 0 ? "text-emerald-600 dark:text-emerald-450" : ""}>
+                    {cleanedData.length > 0 ? "✔ Cleaned" : "○ Clean"}
+                  </span>
+                  <span>/</span>
+                  <span className={currentPath === '/predictive' ? "text-indigo-600" : ""}>○ Predictive</span>
+                  <span>/</span>
+                  <span className={currentPath === '/reports' ? "text-indigo-600" : ""}>○ Reports</span>
+                </div>
+              </div>
+            )}
           </div>
           
           <div className="flex items-center gap-4">
             {isDataLoaded && (
               <button
                 onClick={resetStore}
-                className="flex items-center gap-2 px-4 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl font-semibold text-sm transition shadow-sm"
+                className="flex items-center gap-2 px-4 py-2 bg-white hover:bg-slate-50 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-slate-700 dark:text-slate-250 border border-slate-200 dark:border-neutral-700 rounded-xl font-bold text-xs transition shadow-sm"
               >
-                <RefreshCw className="w-4 h-4" /> Upload New Dataset
+                <RefreshCw className="w-3.5 h-3.5" /> Upload New
               </button>
             )}
-            <span className="px-3 py-1 bg-slate-100 text-slate-700 border border-slate-200 rounded-lg text-xs font-bold uppercase tracking-wider">
+
+            {/* 🔔 Notifications Dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setIsNotificationOpen(!isNotificationOpen)}
+                className="p-2 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-neutral-800 rounded-xl transition relative"
+                aria-label="Toggle notifications"
+              >
+                <Bell className="w-5 h-5" />
+                {notifications.some(n => n.unread) && (
+                  <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
+                )}
+              </button>
+
+              {isNotificationOpen && (
+                <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 rounded-2xl shadow-xl z-50 p-4 flex flex-col gap-3">
+                  <div className="flex justify-between items-center border-b pb-2 dark:border-neutral-700">
+                    <h3 className="font-extrabold text-sm text-slate-900 dark:text-white">Activity Feed</h3>
+                    <button 
+                      onClick={() => setNotifications(prev => prev.map(n => ({ ...n, unread: false })))}
+                      className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline"
+                    >
+                      Mark all read
+                    </button>
+                  </div>
+                  <div className="max-h-60 overflow-y-auto space-y-2.5">
+                    {notifications.map(n => (
+                      <div key={n.id} className={`p-2.5 rounded-xl border text-xs leading-relaxed transition ${n.unread ? 'bg-indigo-50/50 border-indigo-100 text-indigo-950 dark:bg-indigo-950/20 dark:border-indigo-900/50 dark:text-indigo-200' : 'border-slate-100 text-slate-600 dark:border-neutral-700 dark:text-slate-400'}`}>
+                        {n.message}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* 🎨 Theme Selector Dropdown */}
+            <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-neutral-800 p-1 rounded-xl border dark:border-neutral-700">
+              {[
+                { name: 'light', icon: Sun, label: 'Light' },
+                { name: 'dark', icon: Moon, label: 'Dark' },
+                { name: 'corporate', icon: Database, label: 'Corp' },
+                { name: 'high-contrast', icon: Palette, label: 'Contrast' }
+              ].map(t => {
+                const IconComponent = t.icon;
+                const active = theme === t.name;
+                return (
+                  <button
+                    key={t.name}
+                    onClick={() => setTheme(t.name)}
+                    title={t.label}
+                    className={`p-1.5 rounded-lg transition-all ${active ? 'bg-white dark:bg-neutral-750 text-indigo-600 dark:text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                  >
+                    <IconComponent className="w-4 h-4" />
+                  </button>
+                );
+              })}
+            </div>
+
+            <span className="px-3 py-1.5 bg-slate-100 dark:bg-neutral-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-neutral-700 rounded-xl text-[10px] font-extrabold uppercase tracking-wider">
               {user?.role || 'viewer'} mode
             </span>
           </div>

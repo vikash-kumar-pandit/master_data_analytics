@@ -64,3 +64,35 @@ export function getAxiosErrorMessage(axiosError, fallbackMessage = 'Request fail
     return fallbackMessage;
   }
 }
+
+/**
+ * Get actionable recovery suggestion based on error state
+ * @param {any} error - The axios or native error object
+ * @returns {string} - Actionable suggestion string
+ */
+export function getActionableSuggestion(error) {
+  if (error?.message === 'Network Error' || error?.code === 'ERR_NETWORK') {
+    return 'Could not connect to the backend server. Please verify Uvicorn is running at http://localhost:8000.';
+  }
+
+  const status = error?.response?.status;
+  if (status === 401) {
+    return 'Your session has expired. Please log in again.';
+  }
+  if (status === 403) {
+    return 'Access denied. You do not have permissions for this resource.';
+  }
+  if (status === 404) {
+    return 'The requested resource was not found on the server.';
+  }
+  if (status === 413) {
+    return 'The file size is too large. Please split it or upload a smaller file.';
+  }
+  if (status === 422) {
+    return 'Data validation failed. Please check that headers and values match required formats.';
+  }
+  if (status >= 500) {
+    return 'Internal server error. Please check backend Celery worker and database logs.';
+  }
+  return 'Please retry your action, or contact platform support if the problem persists.';
+}
