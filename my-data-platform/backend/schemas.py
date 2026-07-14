@@ -83,6 +83,17 @@ class CreateShareRequest(BaseModel):
     expires_days: int = Field(default=30, ge=1, le=365)
     access_level: str = Field(default="view", pattern="^(view|download|edit)$")
 
+    def validate_inputs(self):
+        """Validate share request inputs."""
+        if not self.report_title or not self.report_title.strip():
+            raise ValueError("report_title cannot be empty")
+        if not isinstance(self.report_data, dict) or not self.report_data:
+            raise ValueError("report_data must be a non-empty dictionary")
+        if self.expires_days < 1 or self.expires_days > 365:
+            raise ValueError("expires_days must be between 1 and 365")
+        if self.access_level not in ["view", "download", "edit"]:
+            raise ValueError("access_level must be 'view', 'download', or 'edit'")
+
 
 class CreateScheduleRequest(BaseModel):
     name: str = Field(..., min_length=1, max_length=200)
@@ -93,10 +104,30 @@ class CreateScheduleRequest(BaseModel):
     recipients: list[str] | None = None
     enabled: bool = True
 
+    def validate_inputs(self):
+        """Validate schedule request inputs."""
+        if not self.name or not self.name.strip():
+            raise ValueError("name cannot be empty")
+        if not self.schedule_cron or not self.schedule_cron.strip():
+            raise ValueError("schedule_cron cannot be empty")
+        if self.export_format not in ["pdf", "pptx", "csv", "bundle"]:
+            raise ValueError("export_format must be 'pdf', 'pptx', 'csv', or 'bundle'")
+        if self.recipients:
+            for email in self.recipients:
+                if not isinstance(email, str) or "@" not in email:
+                    raise ValueError(f"Invalid email format: {email}")
+
 
 class ExecutiveSummaryRequest(BaseModel):
     analysis: dict[str, Any] = Field(..., min_length=1)
     result: dict[str, Any] = Field(..., min_length=1)
+
+    def validate_inputs(self):
+        """Validate summary request inputs."""
+        if not self.analysis:
+            raise ValueError("analysis cannot be empty")
+        if not self.result:
+            raise ValueError("result cannot be empty")
 
 
 class SearchRequest(BaseModel):
